@@ -1,9 +1,12 @@
-const createSwarm = require('../killa-beez')
-const shaolin = require('../shaolin')
+const createSwarm = require('../../killa-beez')
+const funky = require('../../funky')
 const levelup = require('levelup')
 const levjs = require('level-js')
 const isBuffer = require('is-buffer')
 const xhr = require('xhr')
+
+const bongBongMessage = require('./bong-bong-message')
+const bongBongInput = require('./bong-bong-input')
 
 const defaultSignalExchange = 'https://signalexchange.now.sh'
 const defaultRoomExchange = 'https://roomexchange.now.sh'
@@ -104,27 +107,32 @@ function init (elem) {
     }
   })
 
-  getRtcConfig((err, rtcConfig) => {
-    if (err) return console.error(err)
-    elem.set('rtcConfig', rtcConfig)
+  elem.on('connected', () => {
+    getRtcConfig((err, rtcConfig) => {
+      if (err) return console.error(err)
+      elem.set('rtcConfig', rtcConfig)
+    })
   })
 }
 
-shaolin`
+funky`
 ${init}
 <bong-bong>
 </bong-bong>
 <style>
 :host {
-
+  display: flex;
 }
-:host div#display {
-
-}
-:host div#textinput {
-
+div.viewer {
+  width:100%;
 }
 </style>
+<div class="viewer">
+  <div class="messages"></div>
+</div>
+<bong-bong-input>
+</bong-bong-input>
+<slot></slot>
 `
 
 module.exports = shaolin

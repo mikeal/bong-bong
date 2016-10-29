@@ -8,14 +8,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/document-register-element/1.2.0/document-register-element.js"></script>
     <style>
       div#main-container {
-
+        display: flex;
+        justify-content: center;
+      }
+      div#main-container div#center-container {
+        width: 4000px;
       }
     </style>
   </head>
   <body>
     <script src="bundle.js"></script>
     <div id="main-container">
-      <bong-bong room="test"></bong-bong>
+      <div id="center-container">
+        <bong-bong room="test"></bong-bong>
+      </div>
     </div>
   </body>
 </html>
