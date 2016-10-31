@@ -48,7 +48,6 @@ ${init}
   <style>
   bong-bong-settings {
     cursor: pointer;
-    opacity: 0.6;
   }
   bong-bong-settings img {
     padding: 10px;

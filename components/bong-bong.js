@@ -55,7 +55,6 @@ function onLog (elem, opts) {
 
   let onTextMessage = (doc, node) => {
     // TODO: Find existing node and update if exists
-    console.log(node)
     let el = bongBongMessage(doc)
     elem.querySelector('div.bb-display').appendChild(el)
   }
@@ -70,10 +69,8 @@ function onLog (elem, opts) {
     if (!doc || !doc.type) return
     if (doc && doc.type && doc.type === 'user') {
       users[doc.publicKey] = doc
-      console.log('user', user)
     }
     if (doc && doc.type && doc.type === 'text') {
-      console.log('text', doc)
       onTextMessage(doc, node)
     }
   })
@@ -95,7 +92,6 @@ function onLog (elem, opts) {
 
   let postTextMessage = (text) => {
     if (!user.nickname) {
-      console.log('no nick', alert)
       alert('Please set your nickname before posting.')
       return false
     }
@@ -196,6 +192,12 @@ ${init}
   }
   bong-bong-message div.text {
 
+  }
+  bong-bong-message img.emojione {
+    max-height: 1.1em;
+    font-size: 18px;
+    margin-bottom: -2px;
+    line-height: 16px;
   }
   </style>
   <div class="bb-header"></div>
