@@ -10,6 +10,8 @@
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (http://www.mikealrogers.com)",
   "license": "Apache-2.0",
   "dependencies": {
+    "bel": "^4.5.0",
+    "emoji-regex": "^6.0.0",
     "emojione": "^2.2.6",
     "is-buffer": "^1.1.4",
     "level-js": "^2.2.4",

@@ -1,70 +1,97 @@
-const shaolin = require('../../funky')
+const funky = require('../../funky')
 const emojione = require('emojione')
 const select = require('selection-range')
+const emojiRegex = require('emoji-regex')
 
+function count (str, s1) {
+  return (str.length - str.replace(new RegExp(s1, 'g'), '').length) / s1.length
+}
 
-function init (elem) {
-  let supress = (e) => {
-    if (e.which === 8) {
-      console.log(e.which)
-      // e.preventDefault()
-      // e.returnValue = false
-      // return false
-    }
-    console.log(e.target)
+function init (elem, opts) {
+  let textarea = elem.querySelector('div.bb-textinput')
+
+  function setCursorToEnd (el) {
+    let range = document.createRange()
+    range.selectNodeContents(el)
+    range.collapse(false)
+    let sel = window.getSelection()
+    sel.removeAllRanges()
+    sel.addRange(range)
   }
 
-  elem.on('connected', (bool) => {
-    if (!bool) return // disconnected
+  let replace = (str) => {
+    textarea.innerHTML = str
+  }
 
-    let textarea = elem.shadowRoot.querySelector('textarea')
-
-    let onKeydown = (e) => {
-      let value = textarea.textContent
-      let replace = (str) => {
-        textarea.textContent = str
+  let post = () => {
+    for (let i = 0; i < textarea.children.length; i++) {
+      let el = textarea.children[i]
+      if (el.className === 'emojione') {
+        let str = el.getAttribute('alt')
+        textarea.replaceChild(document.createTextNode(str), el)
       }
-      let selection = window.getSelection()
-      let selectedText = selection.toString()
-      let selectedRange = selection.getRangeAt(0)
+    }
+    let txt = textarea.textContent
+    if (opts.postTextMessage(txt)) {
+      textarea.innerHTML = ''
+    }
+  }
 
-      console.log(select(textarea))
+  let onKeyup = (e) => {
+    let value = textarea.innerHTML
+    let textContent = textarea.textContent
+    let selection = select(textarea)
 
-      switch (e.which) {
-        case 8: {
-          // Backspace
-          console.log(selectedRange)
-          select(textarea, { start: 5 })
+    let colons = count(value, ':')
 
-          replace(value.slice(0, value.length - 1))
-          select(textarea, 3)
+    if (colons > 1 || emojiRegex().test(textContent)) {
+      replace(emojione.toImage(value))
+      let len = textContent.length
+      // if (selection.end >= len)
+      setCursorToEnd(textarea)
+    }
+
+    switch (e.which) {
+      case 8: {
+        // Backspace
+        break
+      }
+      case 13: {
+        if (!e.shiftKey && !e.ctrlKey) {
+          e.preventDefault()
+          post()
           break
         }
       }
     }
-
-    textarea.onkeydown = onKeydown
-  })
+  }
+  textarea.onkeypress = onKeyup
 }
 
-shaolin`
+const view = funky`
 ${init}
 <bong-bong-input>
+  <style>
+    bong-bong-input {
+      width:100%;
+    }
+    div.bb-textinput {
+      border-radius: 4px;
+      margin-bottom: 1.5em;
+      border: 1px solid #d3d3d3;
+      font-size: 1em;
+      min-height: 1em;
+      padding: 12px;
+      margin: .5em;
+    }
+    div.bb-textinput img.emojione {
+      max-height: 1.1em;
+      font-size: 20px;
+      margin-bottom: -2px;
+      line-height: 18px;
+    }
+  </style>
+  <div class="bb-textinput" contenteditable="true"></div>
 </bong-bong-input>
-<style>
-  :host {
-    width:100%;
-  }
-  textarea {
-    border-radius: 4px;
-    -khtml-border-radius: 4px;
-    width: 100%;
-    margin-bottom: 1.5em;
-    border: 1px solid #d3d3d3;
-    font-size: 1em;
-    min-height: 6em;
-  }
-</style>
-<textarea></textarea>
-<slot></slot>
 `
+module.exports = view

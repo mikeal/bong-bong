@@ -7,12 +7,21 @@
     <script src="vendor/jquery-2.2.4.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/document-register-element/1.2.0/document-register-element.js"></script>
     <style>
+      body {
+        padding: 0 0 0 0;
+        margin: 0 0 0 0;
+      }
       div#main-container {
         display: flex;
         justify-content: center;
+        height:100%;
+        width:100%;
+        background-color: #a6a6a6;
       }
       div#main-container div#center-container {
-        width: 4000px;
+        max-width:100%;
+        min-width: 800px;
+        background-color: white;
       }
     </style>
   </head>
@@ -20,8 +29,11 @@
     <script src="bundle.js"></script>
     <div id="main-container">
       <div id="center-container">
-        <bong-bong room="test"></bong-bong>
       </div>
     </div>
+    <script>
+      let chat = bongBong({room:'test'})
+      document.getElementById('center-container').appendChild(chat)
+    </script>
   </body>
 </html>
