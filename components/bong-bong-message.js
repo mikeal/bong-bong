@@ -1,25 +1,7 @@
 const funky = require('../../funky')
 const emojione = require('emojione')
 const bel = require('bel')
-
-function init (elem, opts) {
-
-}
-
-var entityMap = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': '&quot;',
-  "'": '&#39;',
-  "/": '&#x2F;'
-};
-
-function escapeHtml(string) {
-  return String(string).replace(/[&<>"'\/]/g, function (s) {
-    return entityMap[s];
-  });
-}
+const escapeHtml = require('./escapeHtml')
 
 function toTextElement (str) {
   str = escapeHtml(str)
@@ -27,7 +9,6 @@ function toTextElement (str) {
 }
 
 const view = funky`
-${init}
 <bong-bong-message>
   <div class="nickname">${ doc => doc.user.nickname }</div>
   <div class="text">${ doc => toTextElement(doc.text) }</div>

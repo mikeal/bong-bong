@@ -5,10 +5,13 @@ const levelup = require('levelup')
 const levjs = require('level-js')
 const isBuffer = require('is-buffer')
 const xhr = require('xhr')
+const dragDrop = require('drag-drop')
+const webtorrent = require('webtorrent')()
 const EventEmitter = require('events').EventEmitter
 
 const bongBongInput = require('./bong-bong-input')
 const bongBongMessage = require('./bong-bong-message')
+const bongBongTorrent = require('./bong-bong-torrent')
 const bongBongSettings = require('./bong-bong-settings')
 
 const defaultSignalExchange = 'https://signalexchange.now.sh'
@@ -40,6 +43,28 @@ function getRtcConfig (cb) {
   })
 }
 
+function setupDragDrop (elem, postTorrent) {
+  dragDrop(elem, {
+    onDrop: files => {
+      webtorrent.seed(files, torrent => {
+        postTorrent(files, torrent)
+      })
+    },
+    onDragOver: () => {
+      // TODO: tmp modal
+    },
+    onDragLeave: () => {
+      // TODO: tmp modal
+    }
+  })
+}
+
+let pluck = (obj, attrs) => {
+  let ret = {}
+  attrs.forEach(a => { ret[a] = obj[a] })
+  return ret
+}
+
 function onLog (elem, opts) {
   let log = opts.log
   let users = opts.users = {}
@@ -59,6 +84,11 @@ function onLog (elem, opts) {
     elem.querySelector('div.bb-display').appendChild(el)
   }
 
+  function onTorrent (doc) {
+    let el = bongBongTorrent(doc)
+    elem.querySelector('div.bb-display').appendChild(el)
+  }
+
   log.on('add', node => {
     let doc
     if (isBuffer(node.value)) {
@@ -67,16 +97,32 @@ function onLog (elem, opts) {
       doc = node.value
     }
     if (!doc || !doc.type) return
-    if (doc && doc.type && doc.type === 'user') {
-      users[doc.publicKey] = doc
-    }
-    if (doc && doc.type && doc.type === 'text') {
-      onTextMessage(doc, node)
+    console.log('doc', doc)
+    if (doc && doc.type) {
+      switch (doc.type) {
+        case 'user': {
+          users[doc.publicKey] = doc
+          break
+        }
+        case 'text': {
+          onTextMessage(doc, node)
+          break
+        }
+        case 'torrent': {
+          onTorrent(doc)
+          break
+        }
+      }
     }
   })
 
   let user = {
     nickname: opts.storage.get('nickname') || null
+  }
+  let post = (type, obj) => {
+    obj.type = type
+    obj.user = user
+    log.add(null, obj)
   }
   let userKey = null
   elem.setUser = (_user) => {
@@ -95,7 +141,7 @@ function onLog (elem, opts) {
       alert('Please set your nickname before posting.')
       return false
     }
-    log.add(null, {text: text, user: user, type: 'text'})
+    post('text', {text})
     return true
   }
 
@@ -109,6 +155,16 @@ function onLog (elem, opts) {
 
   let settings = bongBongSettings(opts)
   elem.querySelector('div.bb-header').appendChild(settings)
+
+  setupDragDrop(elem, (files, torrent) => {
+    let obj = {}
+    let content = ['name', 'type', 'size', 'lastModified']
+    obj.files = files.map(f => pluck(f, content))
+    obj.torrent = pluck(torrent, ['magnetURI', 'infoHash'])
+    obj.torrent.size = torrent.length
+    obj.torrent.files = torrent.files.length
+    post('torrent', obj)
+  })
 }
 
 function onSwarm (elem, opts) {
