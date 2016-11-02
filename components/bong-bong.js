@@ -2,7 +2,8 @@
 const createSwarm = require('../../killa-beez')
 const funky = require('../../funky')
 const levelup = require('levelup')
-const levjs = require('level-js')
+// const levjs = require('level-js')
+const memdown = require('memdown')
 const isBuffer = require('is-buffer')
 const xhr = require('xhr')
 const dragDrop = require('drag-drop')
@@ -14,6 +15,8 @@ const bongBongMessage = require('./bong-bong-message')
 const bongBongTorrent = require('./bong-bong-torrent')
 const bongBongSettings = require('./bong-bong-settings')
 
+const tick = require('./timers')
+
 const defaultSignalExchange = 'https://signalexchange.now.sh'
 const defaultRoomExchange = 'https://roomexchange.now.sh'
 
@@ -23,6 +26,12 @@ defaultStorage.set = (key, value) => {
   localStorage[key] = value
   defaultStorage.emit(key, value)
 }
+
+if (!window.setImmediate) {
+  window.setImmediate = (cb) => setTimeout(cb, 0)
+}
+
+const instant = {behavior: 'instant'}
 
 function getRtcConfig (cb) {
   xhr({
@@ -78,15 +87,60 @@ function onLog (elem, opts) {
     opts.set('nickname', opts.nickname)
   }
 
+  let displayContainer = elem.querySelector('div.bb-display')
+
+  function insertMessage (el, doc) {
+    /*
+      This not the simplest way to insert elements in the right order
+      but it should be the fastest for our use case because it optimizes
+      for new nodes being inserted at the end.
+    */
+    let before = null
+    let spans = [...document.querySelectorAll('span.ts')].reverse()
+    let _insert = () => {
+      let display = displayContainer
+      let top = display.scrollTop
+      let bottom = top + display.clientHeight
+      let height = display.scrollHeight
+
+      if (before === null) {
+        display.appendChild(el)
+      } else {
+        display.insertBefore(el, before.parentNode.parentNode)
+      }
+
+      if (top === 0 || bottom + 5 > height) {
+        // If we are at the very top or very bottom of the scroll
+        // focus on the last element.
+        display.children[display.children.length - 1].scrollIntoView(instant)
+      } else {
+        // TODO: check if we were inserted before or after the prior
+        //       scroll point and adjust accordingly
+      }
+    }
+    for (var i = 0; i < spans.length; i++) {
+      let span = spans[i]
+      let ts = +span.getAttribute('ts')
+      if (ts < doc.ts) {
+        return _insert()
+      } else {
+        before = span
+      }
+    }
+    _insert() // insert before the first element
+  }
+
   let onTextMessage = (doc, node) => {
     // TODO: Find existing node and update if exists
     let el = bongBongMessage(doc)
-    elem.querySelector('div.bb-display').appendChild(el)
+    insertMessage(el, doc)
+    tick()
   }
 
   function onTorrent (doc) {
     let el = bongBongTorrent(doc)
-    elem.querySelector('div.bb-display').appendChild(el)
+    insertMessage(el, doc)
+    tick()
   }
 
   log.on('add', node => {
@@ -97,7 +151,7 @@ function onLog (elem, opts) {
       doc = node.value
     }
     if (!doc || !doc.type) return
-    console.log('doc', doc)
+    // console.log('doc', doc)
     if (doc && doc.type) {
       switch (doc.type) {
         case 'user': {
@@ -122,6 +176,7 @@ function onLog (elem, opts) {
   let post = (type, obj) => {
     obj.type = type
     obj.user = user
+    obj.ts = Date.now()
     log.add(null, obj)
   }
   let userKey = null
@@ -165,6 +220,19 @@ function onLog (elem, opts) {
     obj.torrent.files = torrent.files.length
     post('torrent', obj)
   })
+  // set the height so that overflow works.
+  let reflow = () => {
+    let header = elem.querySelector('div.bb-header')
+    let footer = elem.querySelector('div.bb-footer')
+    let height = elem.scrollHeight - (header.offsetHeight + footer.offsetHeight + 50)
+    let display = elem.querySelector('div.bb-display')
+    display.style.height = height + 'px'
+    if (display.children.length) {
+      display.children[display.children.length - 1].scrollIntoView(instant)
+    }
+  }
+  reflow()
+  window.onresize = reflow
 }
 
 function onSwarm (elem, opts) {
@@ -193,7 +261,7 @@ function init (elem, opts) {
       let ns = opts.ns || 'bong-bong'
       room = `${ns}:${room}`
       let sopts = {
-        levelup: levelup('./' + room + Math.random(), {db: levjs}),
+        levelup: levelup(`./${room}`, {db: memdown}),
         config: rtcConfig
       }
       let swarm = createSwarm(signalExchange, sopts)
@@ -221,6 +289,8 @@ ${init}
   bong-bong div.bb-display {
     flex: 1;
     background-color: #f2f2f2;
+    padding-top: 10px;
+    overflow: auto;
   }
   bong-bong bong-bong-input {
     margin-top: auto;
@@ -230,21 +300,33 @@ ${init}
   }
   bong-bong div.bb-footer {
     border-top: 1px solid #dbdbdb;
+    z-index: 2;
   }
   bong-bong-message {
-    border-radius: 1px;
-    border: 1px solid #d3d3d3;
-    background-color: white;
+    background-color: #fff;
+    border: 1px solid #e1e8ed;
+    border-radius: 5px;
+    padding: 15px;
     display: block;
-    margin: .5em;
-    padding: .5em;
-    font-size: 18px;
+    margin-bottom: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    font-size: 15px;
+    min-height: min-content;
   }
   bong-bong-message div.avatar {
 
   }
-  bong-bong-message div.nickname {
+  bong-bong-message span.nick {
     font-weight: bold;
+  }
+  bong-bong-message span.ts {
+    font-weight: bold;
+    font-size: 12px;
+    color: rgb(158, 158, 166);
+    outline-color: rgb(59, 153, 252);
+    outline-width: 4px;
+    font-weight: lighter;
   }
   bong-bong-message div.text {
 
