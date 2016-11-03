@@ -138,6 +138,7 @@ function onLog (elem, opts) {
   }
 
   function onTorrent (doc) {
+    doc.webtorrent = webtorrent
     let el = bongBongTorrent(doc)
     insertMessage(el, doc)
     tick()
@@ -151,7 +152,7 @@ function onLog (elem, opts) {
       doc = node.value
     }
     if (!doc || !doc.type) return
-    // console.log('doc', doc)
+    console.log('doc', doc)
     if (doc && doc.type) {
       switch (doc.type) {
         case 'user': {
@@ -336,6 +337,18 @@ ${init}
     font-size: 18px;
     margin-bottom: -2px;
     line-height: 16px;
+  }
+  span.bb-download {
+    cursor: pointer;
+  }
+  div.bb-file {
+    padding: 10px;
+  }
+  div.bb-file a {
+    color: black;
+  }
+  div.bb-file span.bb-not-downloaded {
+    color: grey;
   }
   </style>
   <div class="bb-header"></div>

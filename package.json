@@ -12,6 +12,7 @@
   "dependencies": {
     "bel": "^4.5.0",
     "drag-drop": "^2.12.1",
+    "element-class": "^0.2.2",
     "emoji-regex": "^6.0.0",
     "emojione": "^2.2.6",
     "is-buffer": "^1.1.4",
