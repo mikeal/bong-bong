@@ -2,10 +2,25 @@ const funky = require('../../funky')
 const emojione = require('emojione')
 const select = require('selection-range')
 const emojiRegex = require('emoji-regex')
+const autocomplete = require('./autocomplete')
 
 function count (str, s1) {
   return (str.length - str.replace(new RegExp(s1, 'g'), '').length) / s1.length
 }
+
+let keys = o => Object.keys(o)
+let emojiList = keys(emojione.emojioneList)
+let emojiComplete = autocomplete()
+
+emojiList.forEach(str => {
+  if (str[0] === ':') {
+    let key = str.slice(1, str.length - 1)
+    emojiComplete.add(key, str)
+    if (key.indexOf('_')) {
+      key.split('_').forEach(k => emojiComplete.add(k, str))
+    }
+  }
+})
 
 function init (elem, opts) {
   let textarea = elem.querySelector('div.bb-textinput')
