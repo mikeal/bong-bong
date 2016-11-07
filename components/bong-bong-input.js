@@ -3,6 +3,8 @@ const emojione = require('emojione')
 const select = require('selection-range')
 const emojiRegex = require('emoji-regex')
 const autocomplete = require('./autocomplete')
+const bongBongEmojis = require('./bong-bong-emojis')
+const uniq = require('lodash.uniq')
 
 function count (str, s1) {
   return (str.length - str.replace(new RegExp(s1, 'g'), '').length) / s1.length
@@ -22,8 +24,32 @@ emojiList.forEach(str => {
   }
 })
 
+const startsWith = (str, x) => str.slice(0, x.length) === x
+
+function sort (shortnames, search) {
+  shortnames = uniq(shortnames).sort()
+  let first = null
+  let last = null
+  for (var i = 0; i < shortnames.length; i++) {
+    let short = shortnames[i]
+    if (startsWith(short, ':' + search)) {
+      if (first === null) first = i
+      last = i
+    }
+  }
+  return [].concat(
+    shortnames.slice(first, last + 1),
+    shortnames.slice(0, first),
+    shortnames.slice(last + 1)
+  )
+}
+
 function init (elem, opts) {
-  let textarea = elem.querySelector('div.bb-textinput')
+  const textarea = elem.querySelector('div.bb-textinput')
+  const emojiView = bongBongEmojis([])
+  setTimeout(() => {
+    elem.parentNode.insertBefore(emojiView, elem)
+  }, 0)
 
   function setCursorToEnd (el) {
     let range = document.createRange()
@@ -39,8 +65,9 @@ function init (elem, opts) {
   }
 
   let post = () => {
-    for (let i = 0; i < textarea.children.length; i++) {
-      let el = textarea.children[i]
+    let children = [...textarea.children]
+    for (let i = 0; i < children.length; i++) {
+      let el = children[i]
       if (el.className === 'emojione') {
         let str = el.getAttribute('alt')
         textarea.replaceChild(document.createTextNode(str), el)
@@ -55,7 +82,11 @@ function init (elem, opts) {
   let onKeyup = (e) => {
     let value = textarea.innerHTML
     let textContent = textarea.textContent
-    let selection = select(textarea)
+
+    if (e && e.key && e.key !== ':') {
+      value += e.key
+      textContent += e.key
+    }
 
     let colons = count(value, ':')
 
@@ -64,23 +95,35 @@ function init (elem, opts) {
       let len = textContent.length
       // if (selection.end >= len)
       setCursorToEnd(textarea)
+    } else if (colons === 1) {
+      let search = textContent.slice(textContent.lastIndexOf(':')+1)
+      if (search.length) {
+        let terms = sort(emojiComplete.complete(search), search)
+        emojiView.update(terms)
+      } else {
+        emojiView.hide()
+      }
+    } else {
+      emojiView.hide()
     }
-
+  }
+  textarea.onkeypress = onKeyup
+  textarea.onkeydown = e => {
     switch (e.which) {
       case 8: {
         // Backspace
+        textarea.onkeypress()
         break
       }
       case 13: {
         if (!e.shiftKey && !e.ctrlKey) {
           e.preventDefault()
-          post()
+          setTimeout(post, 0)
           break
         }
       }
     }
   }
-  textarea.onkeypress = onKeyup
 }
 
 const view = funky`

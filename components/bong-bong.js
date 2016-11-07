@@ -202,7 +202,8 @@ function onLog (elem, opts) {
   }
 
   let inputView = bongBongInput({log, postTextMessage})
-  elem.querySelector('div.bb-footer').appendChild(inputView)
+  let footer = elem.querySelector('div.bb-footer')
+  footer.appendChild(inputView)
 
   opts.storage.on('nickname', nickname => {
     user.nickname = nickname
@@ -233,6 +234,7 @@ function onLog (elem, opts) {
     }
   }
   reflow()
+  elem._reflow = reflow
   window.onresize = reflow
 }
 
