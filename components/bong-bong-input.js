@@ -1,4 +1,4 @@
-const funky = require('../../funky')
+const funky = require('funky')
 const emojione = require('emojione')
 const select = require('selection-range')
 const emojiRegex = require('emoji-regex')

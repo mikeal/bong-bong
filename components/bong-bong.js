@@ -1,6 +1,6 @@
 /* globals alert, localStorage */
-const createSwarm = require('../../killa-beez')
-const funky = require('../../funky')
+const createSwarm = require('killa-beez')
+const funky = require('funky')
 const levelup = require('levelup')
 // const levjs = require('level-js')
 const memdown = require('memdown')

@@ -1,4 +1,4 @@
-const funky = require('../../funky')
+const funky = require('funky')
 const emojione = require('emojione')
 const bel = require('bel')
 const moment = require('moment')
