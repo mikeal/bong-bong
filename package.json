@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "budo index.js:bundle.js"
+    "start": "budo index.js:bundle.js",
+    "build": "browserify index.js > bundle.js"
   },
   "keywords": [],
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (http://www.mikealrogers.com)",
@@ -27,6 +28,8 @@
     "xhr": "^2.2.2"
   },
   "devDependencies": {
-    "budo": "^9.2.1"
+    "budo": "^9.2.1",
+    "browserify": "^13.1.0",
+    "standard": "^8.4.0"
   }
 }
