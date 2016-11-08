@@ -280,7 +280,7 @@ function init (elem, opts) {
 const view = funky`
 ${init}
 <bong-bong>
-  <link href='http://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css' />
+  <link href='//fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css' />
   <style>
   bong-bong {
     font-family: 'Lato', sans-serif;
