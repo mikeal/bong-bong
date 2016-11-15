@@ -6,13 +6,10 @@ const levelup = require('levelup')
 const memdown = require('memdown')
 const isBuffer = require('is-buffer')
 const xhr = require('xhr')
-const dragDrop = require('drag-drop')
-const webtorrent = require('webtorrent')()
 const EventEmitter = require('events').EventEmitter
 
 const bongBongInput = require('./bong-bong-input')
 const bongBongMessage = require('./bong-bong-message')
-const bongBongTorrent = require('./bong-bong-torrent')
 const bongBongSettings = require('./bong-bong-settings')
 
 const tick = require('./timers')
@@ -50,28 +47,6 @@ function getRtcConfig (cb) {
       cb(null, rtcConfig)
     }
   })
-}
-
-function setupDragDrop (elem, postTorrent) {
-  dragDrop(elem, {
-    onDrop: files => {
-      webtorrent.seed(files, torrent => {
-        postTorrent(files, torrent)
-      })
-    },
-    onDragOver: () => {
-      // TODO: tmp modal
-    },
-    onDragLeave: () => {
-      // TODO: tmp modal
-    }
-  })
-}
-
-let pluck = (obj, attrs) => {
-  let ret = {}
-  attrs.forEach(a => { ret[a] = obj[a] })
-  return ret
 }
 
 function onLog (elem, opts) {
@@ -137,13 +112,6 @@ function onLog (elem, opts) {
     tick()
   }
 
-  function onTorrent (doc) {
-    doc.webtorrent = webtorrent
-    let el = bongBongTorrent(doc)
-    insertMessage(el, doc)
-    tick()
-  }
-
   log.on('add', node => {
     let doc
     if (isBuffer(node.value)) {
@@ -161,10 +129,6 @@ function onLog (elem, opts) {
         }
         case 'text': {
           onTextMessage(doc, node)
-          break
-        }
-        case 'torrent': {
-          onTorrent(doc)
           break
         }
       }
@@ -213,15 +177,6 @@ function onLog (elem, opts) {
   let settings = bongBongSettings(opts)
   elem.querySelector('div.bb-header').appendChild(settings)
 
-  setupDragDrop(elem, (files, torrent) => {
-    let obj = {}
-    let content = ['name', 'type', 'size', 'lastModified']
-    obj.files = files.map(f => pluck(f, content))
-    obj.torrent = pluck(torrent, ['magnetURI', 'infoHash'])
-    obj.torrent.size = torrent.length
-    obj.torrent.files = torrent.files.length
-    post('torrent', obj)
-  })
   // set the height so that overflow works.
   let reflow = () => {
     let header = elem.querySelector('div.bb-header')

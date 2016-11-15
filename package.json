@@ -5,14 +5,13 @@
   "main": "index.js",
   "scripts": {
     "start": "budo index.js:bundle.js",
-    "build": "browserify index.js > bundle.js"
+    "build": "browserify index.js | babili -o bundle.js"
   },
   "keywords": [],
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (http://www.mikealrogers.com)",
   "license": "Apache-2.0",
   "dependencies": {
     "bel": "^4.5.0",
-    "drag-drop": "^2.12.1",
     "element-class": "^0.2.2",
     "emoji-regex": "^6.0.0",
     "emojione": "^2.2.6",
@@ -26,12 +25,12 @@
     "memdown": "^1.2.2",
     "moment": "^2.15.2",
     "selection-range": "^1.1.0",
-    "webtorrent": "^0.97.2",
     "xhr": "^2.2.2"
   },
   "devDependencies": {
-    "budo": "^9.2.1",
+    "babili": "0.0.8",
     "browserify": "^13.1.0",
+    "budo": "^9.2.1",
     "standard": "^8.4.0"
   }
 }

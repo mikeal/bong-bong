@@ -19,7 +19,6 @@ ${ (elem, emojis) => {
   }
   elem.onupdate = showhide
   showhide(emojis)
-  console.log('el', elem)
 }}
 <bong-bong-emojis>
   <style>

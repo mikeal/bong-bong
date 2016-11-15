@@ -4,6 +4,7 @@ const select = require('selection-range')
 const emojiRegex = require('emoji-regex')
 const autocomplete = require('./autocomplete')
 const bongBongEmojis = require('./bong-bong-emojis')
+const bongBongApps = require('./bong-bong-apps')
 const uniq = require('lodash.uniq')
 
 function count (str, s1) {
@@ -47,8 +48,10 @@ function sort (shortnames, search) {
 function init (elem, opts) {
   const textarea = elem.querySelector('div.bb-textinput')
   const emojiView = bongBongEmojis([])
+  const appsView = bongBongApps(bongBongApps.apps)
   setTimeout(() => {
     elem.parentNode.insertBefore(emojiView, elem)
+    elem.parentNode.insertBefore(appsView, elem)
   }, 0)
 
   function setCursorToEnd (el) {
@@ -92,11 +95,11 @@ function init (elem, opts) {
 
     if (colons > 1 || emojiRegex().test(textContent)) {
       replace(emojione.toImage(value))
-      let len = textContent.length
+      // let len = textContent.length
       // if (selection.end >= len)
       setCursorToEnd(textarea)
     } else if (colons === 1) {
-      let search = textContent.slice(textContent.lastIndexOf(':')+1)
+      let search = textContent.slice(textContent.lastIndexOf(':') + 1)
       if (search.length) {
         let terms = sort(emojiComplete.complete(search), search)
         emojiView.update(terms)
@@ -124,6 +127,25 @@ function init (elem, opts) {
       }
     }
   }
+  let reflow = () => {
+    if (elem.parentNode &&
+        elem.parentNode.parentNode &&
+        elem.parentNode.parentNode._reflow) {
+      elem.parentNode.parentNode._reflow()
+    }
+  }
+  let appsButton = elem.querySelector('div.bb-app-button')
+  let showApps = () => {
+    appsView.style.display = 'flex'
+    appsButton.onclick = hideApps
+    reflow()
+  }
+  let hideApps = () => {
+    appsView.style.display = 'none'
+    appsButton.onclick = showApps
+    reflow()
+  }
+  appsButton.onclick = showApps
 }
 
 const view = funky`
@@ -141,6 +163,7 @@ ${init}
       min-height: 1em;
       padding: 12px;
       margin: .5em;
+      width: 100%;
     }
     div.bb-textinput img.emojione {
       max-height: 1.1em;
@@ -148,8 +171,25 @@ ${init}
       margin-bottom: -2px;
       line-height: 18px;
     }
+    div.bb-input {
+      display:flex;
+    }
+    div.bb-input div.bb-app-button {
+      min-width: 1em;
+      border-radius: 4px;
+      margin-bottom: 1.5em;
+      border: 1px solid #d3d3d3;
+      font-size: 1em;
+      min-height: 1em;
+      padding: 12px;
+      margin: .5em 0em .5em .5em;
+      cursor: pointer;
+    }
   </style>
-  <div class="bb-textinput" contenteditable="true"></div>
+  <div class="bb-input">
+    <div class="bb-app-button">⇧</div>
+    <div class="bb-textinput" contenteditable="true"></div>
+  </div>
 </bong-bong-input>
 `
 module.exports = view
