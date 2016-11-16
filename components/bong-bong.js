@@ -1,4 +1,4 @@
-/* globals alert, localStorage */
+/* globals alert, localStorage, URL */
 const createSwarm = require('killa-beez')
 const funky = require('funky')
 const levelup = require('levelup')
@@ -6,11 +6,16 @@ const levelup = require('levelup')
 const memdown = require('memdown')
 const isBuffer = require('is-buffer')
 const xhr = require('xhr')
+const bel = require('bel')
+const moment = require('moment')
 const EventEmitter = require('events').EventEmitter
+
+const globalApps = [require('./apps/dropub.json')]
 
 const bongBongInput = require('./bong-bong-input')
 const bongBongMessage = require('./bong-bong-message')
 const bongBongSettings = require('./bong-bong-settings')
+const bongBongApp = require('./bong-bong-app')
 
 const tick = require('./timers')
 
@@ -26,6 +31,11 @@ defaultStorage.set = (key, value) => {
 
 if (!window.setImmediate) {
   window.setImmediate = (cb) => setTimeout(cb, 0)
+}
+
+const uuid = a => {
+  return a ? (a ^ Math.random() * 16 >> a / 4).toString(16)
+             : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, uuid)
 }
 
 const instant = {behavior: 'instant'}
@@ -48,6 +58,15 @@ function getRtcConfig (cb) {
     }
   })
 }
+
+function findFrame (event) {
+  let frames = document.getElementsByTagName('iframe')
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === event.source) return frames[i]
+  }
+  return false
+}
+
 
 function onLog (elem, opts) {
   let log = opts.log
@@ -95,7 +114,13 @@ function onLog (elem, opts) {
     }
     for (var i = 0; i < spans.length; i++) {
       let span = spans[i]
-      let ts = +span.getAttribute('ts')
+      let _string = span.getAttribute('ts')
+      let ts
+      if (!_string || !_string.length) {
+        ts = Infinity
+      } else {
+        ts = +span.getAttribute('ts')
+      }
       if (ts < doc.ts) {
         return _insert()
       } else {
@@ -112,6 +137,12 @@ function onLog (elem, opts) {
     tick()
   }
 
+  let logsEmitted = [] // TODO: memory leak
+  let supress = (node, doc) => {
+    if (logsEmitted.indexOf(doc.uuid) !== -1) return true
+    return false
+  }
+
   log.on('add', node => {
     let doc
     if (isBuffer(node.value)) {
@@ -120,8 +151,9 @@ function onLog (elem, opts) {
       doc = node.value
     }
     if (!doc || !doc.type) return
-    console.log('doc', doc)
     if (doc && doc.type) {
+      if (supress(node, doc)) return
+      logsEmitted.push(doc.uuid)
       switch (doc.type) {
         case 'user': {
           users[doc.publicKey] = doc
@@ -131,6 +163,22 @@ function onLog (elem, opts) {
           onTextMessage(doc, node)
           break
         }
+        case 'app': {
+          let iframe = bel`
+            <iframe class="bong-bong-app-modal" frameborder=0
+                    src="${doc.data.embed}" scrolling=no />
+          `
+          // let url = new URL(doc.data.embed)
+          let el = bongBongApp(doc)
+          insertMessage(el, doc)
+          tick()
+          let height = 100
+          let width = el.offsetWidth - 32
+          iframe.setAttribute('height', Math.floor(height))
+          iframe.setAttribute('width', Math.floor(width))
+          el.appendChild(iframe)
+          break
+        }
       }
     }
   })
@@ -138,11 +186,13 @@ function onLog (elem, opts) {
   let user = {
     nickname: opts.storage.get('nickname') || null
   }
-  let post = (type, obj) => {
+  let post = (type, obj, cb) => {
     obj.type = type
     obj.user = user
+    obj.uuid = uuid()
     obj.ts = Date.now()
-    log.add(null, obj)
+    log.add(null, obj, cb)
+    return obj.uuid
   }
   let userKey = null
   elem.setUser = (_user) => {
@@ -156,6 +206,60 @@ function onLog (elem, opts) {
   }
   elem.setUser(user)
 
+  let childMessages = {}
+  window.addEventListener('message', msg => {
+    if (msg.data && msg.data.height) {
+      findFrame(msg).setAttribute('height', msg.data.height)
+      return
+    }
+    if (!childMessages[msg.origin]) {
+      return console.error('no app', msg)
+    }
+    childMessages[msg.origin](msg)
+  })
+
+  elem.appMessage = (app) => {
+    let iframe = bel`
+      <iframe class="bong-bong-app-modal" frameborder=0
+              src="${app.iframe}" scrolling=no />
+    `
+    let url = new URL(app.iframe)
+    childMessages[url.origin] = msg => {
+      let info = {data: msg.data, origin: msg.origin}
+      let uuid = post('app', info, (err, node) => {
+        if (err) return console.error(err)
+        // Remove close box
+        let closebox = el.querySelector('div.boxclose')
+        closebox.parentNode.removeChild(closebox)
+        // Set time info
+        let time = el.querySelector('span.ts')
+        time.setAttribute('ts', node.value.ts)
+        let now = Date.now()
+        if ((now - node.value.ts) < 10 * 60 * 1000) {
+          time.innerHTML = moment(node.value.ts).fromNow()
+        } else {
+          time.innerHTML = moment(node.value.ts).calendar()
+        }
+      })
+      logsEmitted.push(uuid)
+      childMessages[url.origin] = null
+    }
+
+    let doc = {type: 'app', user}
+    let el = bongBongApp(doc)
+    insertMessage(el, doc)
+    tick()
+    let height = app.height || 100
+    let width = el.offsetWidth - 32
+    iframe.setAttribute('height', Math.floor(height))
+    iframe.setAttribute('width', Math.floor(width))
+    el.appendChild(iframe)
+    el.querySelector('div.boxclose').onclick = e => {
+      let box = e.target.parentNode.parentNode
+      box.parentNode.removeChild(box)
+    }
+  }
+
   let postTextMessage = (text) => {
     if (!user.nickname) {
       alert('Please set your nickname before posting.')
@@ -165,7 +269,7 @@ function onLog (elem, opts) {
     return true
   }
 
-  let inputView = bongBongInput({log, postTextMessage})
+  let inputView = bongBongInput({log, postTextMessage, apps: globalApps})
   let footer = elem.querySelector('div.bb-footer')
   footer.appendChild(inputView)
 
@@ -295,6 +399,9 @@ ${init}
     margin-bottom: -2px;
     line-height: 16px;
   }
+  bong-bong-message iframe {
+    margin-top: 13px;
+  }
   span.bb-download {
     cursor: pointer;
   }
@@ -306,6 +413,29 @@ ${init}
   }
   div.bb-file span.bb-not-downloaded {
     color: grey;
+  }
+  div.boxclose {
+    line-height: 10px;
+    width: 15px;
+    height: 15px;
+    line-height: 14px;
+    font-size: 8pt;
+    font-family: tahoma;
+    margin-top: -20px;
+    margin-right: -20px;
+    float: right;
+
+    background-color: #FFCCCC;
+    border-radius: 10px;
+    border-color: red;
+    border-style: solid;
+    border-width: 1px;
+
+    text-align: center;
+    vertical-align: middle;
+
+    color: red;
+    cursor: pointer;
   }
   </style>
   <div class="bb-header"></div>

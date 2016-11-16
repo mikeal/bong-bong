@@ -1,15 +1,6 @@
+/* globals URL */
 const funky = require('funky')
 const bel = require('bel')
-
-const apps = [
-  { name: 'Dropup',
-    category: 'file-sharing',
-    width: '80%',
-    height: '80%',
-    iframe: 'https://dropub.com/?embed=true',
-    image: 'https://dropub.com/favicon.png'
-  }
-]
 
 const blurModal = elem => {
   let modalElement = bel`
@@ -92,6 +83,9 @@ const view = funky`
   bong-bong-apps div.bb-app:hover {
     background-color: #E0E0E0;
   }
+  iframe.bong-bong-app-modal {
+    border: 1px solid #e1e8ed;
+  }
   </style>
   ${ apps => apps.map(app => {
     let ret = bel`
@@ -101,14 +95,9 @@ const view = funky`
     `
     ret.onclick = (e) => {
       document.querySelector('div.bb-app-button').click()
-      let iframe = bel`
-        <iframe frameborder=0 src="${app.iframe}" scrolling=no />
-      `
-      modal(iframe)
-      let height = iframe.parentNode.parentNode.offsetHeight * 0.8
-      let width = iframe.parentNode.parentNode.offsetWidth * 0.8
-      iframe.setAttribute('height', height)
-      iframe.setAttribute('width', width)
+      if (document.querySelector('bong-bong').appMessage) {
+        document.querySelector('bong-bong').appMessage(app)
+      }
     }
     return ret
   }) }
@@ -116,4 +105,3 @@ const view = funky`
 `
 
 module.exports = view
-module.exports.apps = apps

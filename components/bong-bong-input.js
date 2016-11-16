@@ -48,7 +48,7 @@ function sort (shortnames, search) {
 function init (elem, opts) {
   const textarea = elem.querySelector('div.bb-textinput')
   const emojiView = bongBongEmojis([])
-  const appsView = bongBongApps(bongBongApps.apps)
+  const appsView = bongBongApps(opts.apps || [])
   setTimeout(() => {
     elem.parentNode.insertBefore(emojiView, elem)
     elem.parentNode.insertBefore(appsView, elem)
