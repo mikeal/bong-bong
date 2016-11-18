@@ -5,8 +5,10 @@ const moment = require('moment')
 const escapeHtml = require('./escapeHtml')
 
 function toTextElement (str) {
-  str = escapeHtml(str)
-  return bel([`<span>${emojione.toImage(str)}</span>`])
+  // str = escapeHtml(str)
+  let ret = bel`<span></span>`
+  ret.innerHTML = emojione.toImage(str)
+  return ret
 }
 
 const view = funky`
