@@ -6,7 +6,7 @@ const view = funky`
 <bong-bong-message>
   <div class="nickname">
     <span class="nick">${ doc => doc.user.nickname }</span>
-    <span class="ts" ts="${ doc => doc.ts ? '' + doc.ts : '' }"
+    <span class="ts" ts="${ doc => doc.ts ? '' + doc.ts : 'none' }"
     >${ doc => {
       if (!doc.ts) return ''
       let now = Date.now()

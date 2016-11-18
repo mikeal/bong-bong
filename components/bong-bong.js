@@ -116,12 +116,12 @@ function onLog (elem, opts) {
       let span = spans[i]
       let _string = span.getAttribute('ts')
       let ts
-      if (!_string || !_string.length) {
+      if (_string === 'none') {
         ts = Infinity
       } else {
-        ts = +span.getAttribute('ts')
+        ts = +_string
       }
-      if (ts < doc.ts) {
+      if (ts < (doc.ts ? doc.ts : Infinity)) {
         return _insert()
       } else {
         before = span

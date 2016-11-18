@@ -20,14 +20,19 @@ setInterval(() => {
     let spans = [...document.querySelectorAll('span.ts')].reverse()
     for (var i = 0; i < spans.length; i++) {
       let elem = spans[i]
-      let ts = +elem.getAttribute('ts')
-      if (now - ts > (10 * 60 * 1000)) {
-        return // Anything that far back is already set
-      }
-      if (now - ts > (5 * 60 * 1000)) {
-        setSpan(elem, moment(ts).calendar())
+      let _string = elem.getAttribute('ts')
+      if (_string !== 'none') {
+        let ts = +_string
+        if (now - ts > (10 * 60 * 1000)) {
+          return // Anything that far back is already set
+        }
+        if (now - ts > (5 * 60 * 1000)) {
+          setSpan(elem, moment(ts).calendar())
+        } else {
+          setSpan(elem, moment(ts).fromNow())
+        }
       } else {
-        setSpan(elem, moment(ts).fromNow())
+        setSpan(elem, 'Draft')
       }
     }
   }
@@ -40,11 +45,16 @@ setInterval(() => {
     let spans = [...document.querySelectorAll('span.ts')].reverse()
     for (var i = 0; i < spans.length; i++) {
       let elem = spans[i]
-      let ts = +elem.getAttribute('ts')
-      if (now - ts > (10 * 60 * 1000)) {
-        return // Anything that far back is already set
+      let _string = elem.getAttribute('ts')
+      if (_string !== 'none') {
+        ts = +_string
+        if (now - ts > (10 * 60 * 1000)) {
+          return // Anything that far back is already set
+        }
+        setSpan(elem, moment(ts).calendar())
+      } else {
+        setSpan(elem, 'Draft')
       }
-      setSpan(elem, moment(ts).calendar())
     }
   }
 }, 1 * 60 * 1000)
