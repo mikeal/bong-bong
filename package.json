@@ -21,6 +21,7 @@
     "killa-beez": "^2.5.0",
     "level-js": "^2.2.4",
     "levelup": "^1.3.3",
+    "linkifyjs": "^2.1.3",
     "lodash.uniq": "^4.5.0",
     "memdown": "^1.2.2",
     "moment": "^2.15.2",
