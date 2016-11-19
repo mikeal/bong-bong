@@ -10,11 +10,15 @@ const bel = require('bel')
 const moment = require('moment')
 const EventEmitter = require('events').EventEmitter
 
-const globalApps = [require('./apps/dropub.json')]
+const globalApps = [
+  require('./apps/dropub.json'),
+  require('./apps/stickers.json')
+]
 
 const bongBongInput = require('./bong-bong-input')
 const bongBongMessage = require('./bong-bong-message')
 const bongBongSettings = require('./bong-bong-settings')
+const bongBongImage = require('./bong-bong-image')
 const bongBongApp = require('./bong-bong-app')
 
 const tick = require('./timers')
@@ -179,6 +183,11 @@ function onLog (elem, opts) {
           el.appendChild(iframe)
           break
         }
+        case 'image': {
+          let el = bongBongImage(doc)
+          insertMessage(el, doc)
+          break
+        }
       }
     }
   })
@@ -208,10 +217,12 @@ function onLog (elem, opts) {
 
   let childMessages = {}
   window.addEventListener('message', msg => {
+    // Height Set
     if (msg.data && msg.data.height) {
       findFrame(msg).setAttribute('height', msg.data.height)
       return
     }
+    // Doc Write
     if (!childMessages[msg.origin]) {
       return console.error('no app', msg)
     }
@@ -226,8 +237,8 @@ function onLog (elem, opts) {
     let url = new URL(app.iframe)
     childMessages[url.origin] = msg => {
       let info = {data: msg.data, origin: msg.origin}
-      let uuid = post('app', info, (err, node) => {
-        if (err) return console.error(err)
+
+      let cleanup = () => {
         // Remove close box
         let closebox = el.querySelector('div.boxclose')
         closebox.parentNode.removeChild(closebox)
@@ -235,12 +246,34 @@ function onLog (elem, opts) {
         let time = el.querySelector('span.ts')
         time.setAttribute('ts', node.value.ts)
         let now = Date.now()
+
         if ((now - node.value.ts) < 10 * 60 * 1000) {
           time.innerHTML = moment(node.value.ts).fromNow()
         } else {
           time.innerHTML = moment(node.value.ts).calendar()
         }
-      })
+      }
+
+      let uuid
+      // Image insert
+      if (msg.data && msg.data.image) {
+        info.image = msg.data.image
+        uuid = post('image', info, (err, node) => {
+          if (err) return console.error(err)
+          cleanup()
+          let iframe = findFrame(msg)
+          let parent = iframe.parentNode
+          parent.removeChild(iframe)
+          parent.appendChild(bel`<img src="${msg.data.image}" />`)
+        })
+      }
+      if (msg.data && msg.data.embed) {
+        uuid = post('app', info, (err, node) => {
+          if (err) return console.error(err)
+          cleanup()
+          // Leave iframe active.
+        })
+      }
       logsEmitted.push(uuid)
       childMessages[url.origin] = null
     }

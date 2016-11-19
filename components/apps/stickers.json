@@ -1,0 +1,6 @@
+{ "name": "Giphy Stickers",
+  "category": "stickers",
+  "height": 200,
+  "iframe": "https://mikeal.github.io/giphy-sticker-app/",
+  "image": "https://mikeal.github.io/giphy-sticker-app/favicon.png"
+}
