@@ -2,8 +2,6 @@ const funky = require('funky')
 const emojione = require('emojione')
 const bel = require('bel')
 const bongBongTime = require('./bong-bong-time')
-const escapeHtml = require('./escapeHtml')
-// const linkify = require('linkifyjs')
 
 var linkify = require('linkifyjs/html')
 
