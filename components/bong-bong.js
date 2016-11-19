@@ -235,6 +235,8 @@ function onLog (elem, opts) {
               src="${app.iframe}" scrolling=no />
     `
     let url = new URL(app.iframe)
+    let doc = {type: 'app', user}
+    let el = bongBongApp(doc)
     childMessages[url.origin] = msg => {
       let info = {data: msg.data, origin: msg.origin}
 
@@ -260,11 +262,8 @@ function onLog (elem, opts) {
         info.image = msg.data.image
         uuid = post('image', info, (err, node) => {
           if (err) return console.error(err)
-          cleanup(node)
-          let iframe = findFrame(msg)
-          let parent = iframe.parentNode
-          parent.removeChild(iframe)
-          parent.appendChild(bel`<img src="${msg.data.image}" />`)
+          el.parentNode.removeChild(el)
+          insertMessage(bongBongImage(node.value), node.value)
         })
       }
       if (msg.data && msg.data.embed) {
@@ -278,8 +277,6 @@ function onLog (elem, opts) {
       childMessages[url.origin] = null
     }
 
-    let doc = {type: 'app', user}
-    let el = bongBongApp(doc)
     insertMessage(el, doc)
     tick()
     let height = app.height || 100
