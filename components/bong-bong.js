@@ -238,7 +238,7 @@ function onLog (elem, opts) {
     childMessages[url.origin] = msg => {
       let info = {data: msg.data, origin: msg.origin}
 
-      let cleanup = () => {
+      let cleanup = (node) => {
         // Remove close box
         let closebox = el.querySelector('div.boxclose')
         closebox.parentNode.removeChild(closebox)
@@ -260,7 +260,7 @@ function onLog (elem, opts) {
         info.image = msg.data.image
         uuid = post('image', info, (err, node) => {
           if (err) return console.error(err)
-          cleanup()
+          cleanup(node)
           let iframe = findFrame(msg)
           let parent = iframe.parentNode
           parent.removeChild(iframe)
@@ -270,7 +270,7 @@ function onLog (elem, opts) {
       if (msg.data && msg.data.embed) {
         uuid = post('app', info, (err, node) => {
           if (err) return console.error(err)
-          cleanup()
+          cleanup(node)
           // Leave iframe active.
         })
       }
