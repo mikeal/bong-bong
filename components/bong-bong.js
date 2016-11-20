@@ -107,7 +107,7 @@ function onLog (elem, opts) {
         display.insertBefore(el, before.parentNode.parentNode)
       }
 
-      if (top === 0 || (bottom + 5) > height) {
+      if (top === 0 || (bottom + el.scrollHeight + 5) > height) {
         // If we are at the very top or very bottom of the scroll
         // focus on the last element.
         display.children[display.children.length - 1].scrollIntoView(instant)
