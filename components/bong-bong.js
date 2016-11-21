@@ -201,6 +201,11 @@ function onLog (elem, opts) {
         }
         case 'app-data': {
           let iframe = document.getElementById(`embed-${doc['embed-uuid']}`)
+          if (!iframe.write) {
+            iframe.write = data => {
+              iframe.contentWindow.postMessage({data}, '*')
+            }
+          }
           iframe.write(doc.data)
           break
         }
