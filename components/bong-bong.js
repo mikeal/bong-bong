@@ -12,7 +12,8 @@ const EventEmitter = require('events').EventEmitter
 
 const globalApps = [
   require('./apps/dropub.json'),
-  require('./apps/stickers.json')
+  require('./apps/stickers.json'),
+  require('./apps/pixel-pad.json')
 ]
 
 const bongBongInput = require('./bong-bong-input')
@@ -180,7 +181,27 @@ function onLog (elem, opts) {
           let width = el.offsetWidth - 32
           iframe.setAttribute('height', Math.floor(height))
           iframe.setAttribute('width', Math.floor(width))
+          iframe.setAttribute('embed-uuid', doc.uuid)
+          iframe.setAttribute('embed-latestKey', node.key)
+          iframe.setAttribute('id', `embed-${doc.uuid}`)
+          let pending = []
+          iframe.write = data => {
+            pending.push(data)
+          }
+          iframe.onload = () => {
+            iframe.write = data => {
+              iframe.contentWindow.postMessage({data}, '*')
+            }
+            while (pending.length) {
+              iframe.write(pending.shift())
+            }
+          }
           el.appendChild(iframe)
+          break
+        }
+        case 'app-data': {
+          let iframe = document.getElementById(`embed-${doc['embed-uuid']}`)
+          iframe.write(doc.data)
           break
         }
         case 'image': {
@@ -200,7 +221,11 @@ function onLog (elem, opts) {
     obj.user = user
     obj.uuid = uuid()
     obj.ts = Date.now()
-    log.add(null, obj, cb)
+    let parent = null
+    if (obj.parent) {
+      parent = obj.parent
+    }
+    log.add(parent, obj, cb)
     return obj.uuid
   }
   let userKey = null
@@ -217,16 +242,39 @@ function onLog (elem, opts) {
 
   let childMessages = {}
   window.addEventListener('message', msg => {
+    let frame = findFrame(msg)
     // Height Set
     if (msg.data && msg.data.height) {
-      findFrame(msg).setAttribute('height', msg.data.height)
+      frame.setAttribute('height', msg.data.height)
       return
     }
-    // Doc Write
-    if (!childMessages[msg.origin]) {
-      return console.error('no app', msg)
+    let nodeid = frame.getAttribute('embed-uuid')
+    if (!nodeid) {
+      // Initial Doc Write.
+      if (!childMessages[msg.origin]) {
+        return console.error('no app', msg)
+      }
+      childMessages[msg.origin](msg)
+    } else {
+      if (!msg.data.app && !msg.data.data) {
+        return console.error('not app data', msg)
+      }
+      // Doc write from app in stream.
+      let uuid = frame.getAttribute('embed-uuid')
+      let latestKey = frame.getAttribute('embed-latestKey')
+      let info = {
+        data: msg.data.data,
+        origin: msg.origin,
+        api: msg.data.api,
+        app: msg.data.app,
+        parent: latestKey,
+        'embed-uuid': uuid
+      }
+      post('app-data', info, (err, node) => {
+        if (err) return console.error(err)
+        frame.setAttribute('embed-latestKey', node.key)
+      })
     }
-    childMessages[msg.origin](msg)
   })
 
   elem.appMessage = (app) => {
@@ -256,6 +304,12 @@ function onLog (elem, opts) {
         }
       }
 
+      let setNodeId = node => {
+        iframe.setAttribute('embed-uuid', node.value.uuid)
+        iframe.setAttribute('embed-latestKey', node.key)
+        iframe.setAttribute('id', `embed-${node.value.uuid}`)
+      }
+
       let uuid
       // Image insert
       if (msg.data && msg.data.image) {
@@ -264,6 +318,7 @@ function onLog (elem, opts) {
           if (err) return console.error(err)
           el.parentNode.removeChild(el)
           insertMessage(bongBongImage(node.value), node.value)
+          setNodeId(node)
         })
       }
       if (msg.data && msg.data.embed) {
@@ -271,6 +326,7 @@ function onLog (elem, opts) {
           if (err) return console.error(err)
           cleanup(node)
           // Leave iframe active.
+          setNodeId(node)
         })
       }
       logsEmitted.push(uuid)
