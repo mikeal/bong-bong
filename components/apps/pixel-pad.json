@@ -1,6 +1,6 @@
 { "name": "Pixel Pad",
   "category": "art",
   "height": 300,
-  "iframe": "http://localhost:9967/",
-  "image": "https://localhost:9967/favicon.png"
+  "iframe": "https://mikeal.github.io/pixel-pad/",
+  "image": "https://mikeal.github.io/pixel-pad/favicon.png"
 }
