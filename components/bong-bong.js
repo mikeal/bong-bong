@@ -34,10 +34,6 @@ defaultStorage.set = (key, value) => {
   defaultStorage.emit(key, value)
 }
 
-if (!window.setImmediate) {
-  window.setImmediate = (cb) => setTimeout(cb, 0)
-}
-
 const uuid = a => {
   return a ? (a ^ Math.random() * 16 >> a / 4).toString(16)
              : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, uuid)
@@ -247,6 +243,12 @@ function onLog (elem, opts) {
 
   let childMessages = {}
   window.addEventListener('message', msg => {
+    if (msg.data &&
+        typeof msg.data === 'string' &&
+        msg.data.slice(0, 'setImmediate'.length) === 'setImmediate') {
+      return // setImmediate polyfill.
+    }
+    console.log(msg)
     let frame = findFrame(msg)
     // Height Set
     if (msg.data && msg.data.height) {

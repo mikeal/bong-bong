@@ -18,7 +18,7 @@
     "functional-red-black-tree": "^1.0.1",
     "funky": "^2.2.0",
     "is-buffer": "^1.1.4",
-    "killa-beez": "^2.5.0",
+    "killa-beez": "^2.6.0",
     "level-js": "^2.2.4",
     "levelup": "^1.3.3",
     "linkifyjs": "^2.1.3",
