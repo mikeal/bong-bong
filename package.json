@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "deploy": "now -e BONG_COUCHDB=@bong_couchdb",
-    "dev": "budo index.js:bundle.js & node server.js",
+    "dev": "budo index.js:bundle.js & node server.js & wait",
     "build": "browserify index.js | babili -o bundle.js"
   },
   "keywords": [],
@@ -32,7 +32,8 @@
     "memdown": "^1.2.2",
     "moment": "^2.15.2",
     "selection-range": "^1.1.0",
-    "sodi": "^0.2.0",
+    "sodi": "^0.3.0",
+    "sodi-authority": "^0.2.0",
     "websocket-stream": "^3.3.3",
     "xhr": "^2.2.2"
   },

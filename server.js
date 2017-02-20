@@ -4,8 +4,8 @@ const jsonstream2 = require('jsonstream2')
 const corsify = require('corsify')
 const events = require('events')
 const http = require('http')
-const sodi = require('../sodi')
-const sodiAuthority = require('../sodi-authority')
+const sodi = require('sodi')
+const sodiAuthority = require('sodi-authority')
 
 const defaultdb = 'https://mikeal.cloudant.com/bong-bong'
 const storage = require('./lib/storage')(process.env.BONG_COUCHDB || defaultdb)
