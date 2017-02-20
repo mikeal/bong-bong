@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "deploy": "now -e BONG_COUCHDB=@bong_couchdb",
-    "dev": "budo index.js:bundle.js & node server.js & wait",
+    "dev": "budo index.js:bundle.js",
+    "devsocket": "budo index.js:bundle.js & node server.js & wait",
     "build": "browserify index.js | babili -o bundle.js"
   },
   "keywords": [],

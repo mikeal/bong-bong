@@ -1,6 +1,5 @@
 /* globals alert, localStorage, URL */
 const funky = require('funky')
-const isBuffer = require('is-buffer')
 const bel = require('bel')
 const moment = require('moment')
 const jsonstream2 = require('jsonstream2')
@@ -335,21 +334,19 @@ function init (elem, opts) {
   if (opts.log) {
     return onLog(elem, opts)
   }
-  if (!opts.log && opts.swarm) {
-    return onSwarm(elem, opts)
-  }
 
   let room = opts.room
 
   if (!room) throw new Error('room not set')
 
-  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  let host
-  if (window.location.hostname === 'localhost') {
+  host = 'bong-bong.now.sh'
+  scheme = 'wss'
+
+  if ((new URL(window.location)).searchParams.get('devsocket')) {heme
+    scheme = 'ws'
     host = 'localhost:8080'
-  } else {
-    host = 'bong-bong.now.sh'
   }
+
   const ws = websocket(`${scheme}://${host}`)
 
   if (localStorage.bongBongToken) {
@@ -384,8 +381,10 @@ function init (elem, opts) {
   }
 
   const meth = methodman(ws)
+  console.log('starting')
   meth.on('commands:base', remote => {
     // TODO: initial query
+    console.log('remote')
     remote.joinRoom(room, (err, info) => {
       if (err) throw err
     })
@@ -407,6 +406,7 @@ function init (elem, opts) {
     })
   })
   meth.on('stream:database', (stream, id) => {
+    console.log('database stream')
     // TODO: decode JSON
     let parser = jsonstream2.parse([/./])
     let log = new events.EventEmitter()
@@ -431,6 +431,13 @@ function init (elem, opts) {
     opts.log = log
     onLog(elem, opts)
     if (opts.login) opts.login()
+
+    let reconnect = e => {
+      console.log('Disconnected', e)
+      // TODO: Implement reconnect logic.
+    }
+    stream.on('error', reconnect)
+    stream.on('end', reconnect)
   })
 }
 
