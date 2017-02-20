@@ -49,6 +49,18 @@ function findFrame (event) {
   return false
 }
 
+function validAuthority (signature) {
+  for (var i = 0; i < sodiAuthority.knownKeys.length; i++) {
+    let key = sodiAuthority.knownKeys[i]
+    if (signature.publicKey === key.key) {
+      if (key.expiration > Date.now()) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
 function onLog (elem, opts) {
   let log = opts.log
   if (!log) throw new Error('Must set the log before setting the feed.')
@@ -389,6 +401,10 @@ function init (elem, opts) {
       remote.writeData(room, doc, cb)
     }
     // TODO: opts.writeData
+
+    remote.recent(room, (err, info) => {
+      // TODO: add button for further paging.
+    })
   })
   meth.on('stream:database', (stream, id) => {
     // TODO: decode JSON
@@ -399,7 +415,14 @@ function init (elem, opts) {
       return sodi.verify(msg, doc.signature, doc.publicKey)
     }
     stream.pipe(parser).on('data', obj => {
-      if (verify(obj) && verify(obj.authorities[0])) {
+      // Check if this was signed by a valid authority
+      if (!validAuthority(obj.authorities[0])) return
+      // Verify both the authority signature and message
+      // signature are valid.
+      if (verify(obj) &&
+          verify(obj.authorities[0]) &&
+          obj.authorities[0].message.publicKey === obj.publicKey
+        ) {
         let user = obj.authorities[0].message.user
         let doc = obj.message
         log.emit('data', {user, doc})

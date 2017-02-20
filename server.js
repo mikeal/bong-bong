@@ -17,7 +17,6 @@ storage.feed.on('change', change => {
   if (rooms.listenerCount(room)) {
     storage.db.get(change.id, (err, doc) => {
       if (err) return console.error('BAD!!!')
-      console.log(room, doc)
       rooms.emit(room, doc)
     })
   }
@@ -44,21 +43,45 @@ function onWebsocketStream (stream) {
     rooms.on(room, dbWrite)
     inRooms.push(room)
   }
-  rpc.writeData = (room, doc, cb) => {
-    doc.authorities[0]
-    let msg = JSON.stringify(doc.message)
-    let verified = sodi.verify(msg, doc.signature, doc.publicKey)
-    if (!verified) {
-      console.log('bad sign')
-      return cb(new Error('Invalid signature.'))
+  rpc.recent = (room, ts, cb) => {
+    if (!cb) {
+      cb = ts
+      ts = (new Date()).toISOString()
     }
+    let end = (new Date(Date.now() / 2)).toISOString()
+    let query = {
+      startkey: `${room}@${ts}`,
+      endkey: `${room}@${end}`,
+      descending: true,
+      include_docs: true,
+      limit: 20
+    }
+    storage.db.all(query, (e, results) => {
+      if (e) return cb(e)
+      cb(null, results.rows.map(r => r.id))
+      results.rows.map(row => row.doc).forEach(doc => dbWrite(doc))
+    })
+  }
+  rpc.writeData = (room, doc, cb) => {
+    let verify = doc => {
+      let msg = JSON.stringify(doc.message)
+      return sodi.verify(msg, doc.signature, doc.publicKey)
+    }
+    // Check if this was signed by a valid authority
     if (!validAuthority(doc.authorities[0])) {
-      console.error('no valid auth')
       return cb(new Error('No valid authority'))
     }
-    doc._id = `${room}@${(new Date()).toISOString()}`
-    console.log('posting', doc)
-    storage.db.post(doc, cb)
+    // Verify both the authority signature and message
+    // signature are valid.
+    if (verify(doc) &&
+        verify(doc.authorities[0]) &&
+        doc.authorities[0].message.publicKey === doc.publicKey
+      ) {
+      doc._id = `${room}@${(new Date()).toISOString()}`
+      storage.db.post(doc, cb)
+    } else {
+      return cb(new Error('Invalid signature.'))
+    }
   }
 
   var meth = methodman(stream)
