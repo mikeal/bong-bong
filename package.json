@@ -39,7 +39,7 @@
     "xhr": "^2.2.2"
   },
   "devDependencies": {
-    "babili": "0.0.8",
+    "babili": "0.0.11",
     "browserify": "^13.1.0",
     "budo": "^9.2.1",
     "now": "^4.5.6",
