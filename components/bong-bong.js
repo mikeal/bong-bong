@@ -1,14 +1,17 @@
 /* globals alert, localStorage, URL */
-const createSwarm = require('killa-beez')
 const funky = require('funky')
-const levelup = require('levelup')
-// const levjs = require('level-js')
-const memdown = require('memdown')
 const isBuffer = require('is-buffer')
-const xhr = require('xhr')
 const bel = require('bel')
 const moment = require('moment')
+const jsonstream2 = require('jsonstream2')
+const sodiAuthority = require('../../sodi-authority')
+const sodi = require('../../sodi')
+const events = require('events')
+const blurModal = require('blur-modal')
 const EventEmitter = require('events').EventEmitter
+
+const websocket = require('websocket-stream')
+const methodman = require('methodman')
 
 const globalApps = [
   require('./apps/dropub.json'),
@@ -24,9 +27,6 @@ const bongBongApp = require('./bong-bong-app')
 
 const tick = require('./timers')
 
-const defaultSignalExchange = 'https://signalexchange.now.sh'
-const defaultRoomExchange = 'https://roomexchange.now.sh'
-
 const defaultStorage = new EventEmitter()
 defaultStorage.get = key => localStorage[key]
 defaultStorage.set = (key, value) => {
@@ -41,25 +41,6 @@ const uuid = a => {
 
 const instant = {behavior: 'instant'}
 
-function getRtcConfig (cb) {
-  xhr({
-    url: 'https://instant.io/rtcConfig',
-    timeout: 10000
-  }, (err, res) => {
-    if (err || res.statusCode !== 200) {
-      cb(new Error('Could not get WebRTC config from server. Using default (without TURN).'))
-    } else {
-      var rtcConfig
-      try {
-        rtcConfig = JSON.parse(res.body)
-      } catch (err) {
-        return cb(new Error('Got invalid WebRTC config from server: ' + res.body))
-      }
-      cb(null, rtcConfig)
-    }
-  })
-}
-
 function findFrame (event) {
   let frames = document.getElementsByTagName('iframe')
   for (var i = 0; i < frames.length; i++) {
@@ -68,11 +49,8 @@ function findFrame (event) {
   return false
 }
 
-
 function onLog (elem, opts) {
   let log = opts.log
-  let users = opts.users = {}
-  let publicKey = opts.publicKey || opts.swarm.publicKey
   if (!log) throw new Error('Must set the log before setting the feed.')
 
   if (!opts.storage) {
@@ -131,115 +109,76 @@ function onLog (elem, opts) {
     _insert() // insert before the first element
   }
 
-  let onTextMessage = (doc, node) => {
+  let onTextMessage = (doc) => {
     // TODO: Find existing node and update if exists
     let el = bongBongMessage(doc)
     insertMessage(el, doc)
     tick()
   }
 
-  let logsEmitted = [] // TODO: memory leak
-  let supress = (node, doc) => {
-    if (logsEmitted.indexOf(doc.uuid) !== -1) return true
-    return false
+  let post = (type, data, cb) => {
+    opts.writeData({type, data}, cb)
   }
 
-  log.on('add', node => {
-    let doc
-    if (isBuffer(node.value)) {
-      doc = JSON.parse(node.value.toString())
-    } else if (node.value.type) {
-      doc = node.value
-    }
-    if (!doc || !doc.type) return
-    if (doc && doc.type) {
-      if (supress(node, doc)) return
-      logsEmitted.push(doc.uuid)
-      switch (doc.type) {
-        case 'user': {
-          users[doc.publicKey] = doc
-          break
+  log.on('data', obj => {
+    let doc = obj.doc
+    let user = obj.user
+    if (!doc || !doc.type || !user) return
+    doc.user = user
+
+    switch (doc.type) {
+      case 'text': {
+        onTextMessage(doc)
+        break
+      }
+      case 'app': {
+        let iframe = bel`
+          <iframe class="bong-bong-app-modal" frameborder=0
+                  src="${doc.data.embed}" scrolling=no />
+        `
+        // let url = new URL(doc.data.embed)
+        let el = bongBongApp(doc)
+        insertMessage(el, doc)
+        tick()
+        let height = 100
+        let width = el.offsetWidth - 32
+        iframe.setAttribute('height', Math.floor(height))
+        iframe.setAttribute('width', Math.floor(width))
+        iframe.setAttribute('embed-uuid', doc.uuid)
+        iframe.setAttribute('embed-latestKey', doc._id)
+        iframe.setAttribute('id', `embed-${doc.uuid}`)
+        let pending = []
+        iframe.write = data => {
+          pending.push(data)
         }
-        case 'text': {
-          onTextMessage(doc, node)
-          break
-        }
-        case 'app': {
-          let iframe = bel`
-            <iframe class="bong-bong-app-modal" frameborder=0
-                    src="${doc.data.embed}" scrolling=no />
-          `
-          // let url = new URL(doc.data.embed)
-          let el = bongBongApp(doc)
-          insertMessage(el, doc)
-          tick()
-          let height = 100
-          let width = el.offsetWidth - 32
-          iframe.setAttribute('height', Math.floor(height))
-          iframe.setAttribute('width', Math.floor(width))
-          iframe.setAttribute('embed-uuid', doc.uuid)
-          iframe.setAttribute('embed-latestKey', node.key)
-          iframe.setAttribute('id', `embed-${doc.uuid}`)
-          let pending = []
+        iframe.onload = () => {
           iframe.write = data => {
-            pending.push(data)
+            iframe.contentWindow.postMessage({data}, '*')
           }
-          iframe.onload = () => {
-            iframe.write = data => {
-              iframe.contentWindow.postMessage({data}, '*')
-            }
-            while (pending.length) {
-              iframe.write(pending.shift())
-            }
+          while (pending.length) {
+            iframe.write(pending.shift())
           }
-          el.appendChild(iframe)
-          break
         }
-        case 'app-data': {
-          let iframe = document.getElementById(`embed-${doc['embed-uuid']}`)
-          if (!iframe.write) {
-            iframe.write = data => {
-              iframe.contentWindow.postMessage({data}, '*')
-            }
+        el.appendChild(iframe)
+        break
+      }
+      case 'app-data': {
+        let iframe = document.getElementById(`embed-${doc['embed-uuid']}`)
+        if (!iframe.write) {
+          iframe.write = data => {
+            iframe.contentWindow.postMessage({data}, '*')
           }
-          iframe.write(doc.data)
-          break
         }
-        case 'image': {
-          let el = bongBongImage(doc)
-          insertMessage(el, doc)
-          break
-        }
+        iframe.write(doc.data)
+        break
+      }
+      case 'image': {
+        let el = bongBongImage(doc)
+        insertMessage(el, doc)
+        break
       }
     }
   })
-
-  let user = {
-    nickname: opts.storage.get('nickname') || null
-  }
-  let post = (type, obj, cb) => {
-    obj.type = type
-    obj.user = user
-    obj.uuid = uuid()
-    obj.ts = Date.now()
-    let parent = null
-    if (obj.parent) {
-      parent = obj.parent
-    }
-    log.add(parent, obj, cb)
-    return obj.uuid
-  }
-  let userKey = null
-  elem.setUser = (_user) => {
-    user = _user
-    user.publicKey = publicKey
-    user.type = 'user'
-    log.add(userKey ? [userKey] : null, user, (err, node) => {
-      if (err) return console.error(err)
-      userKey = node.key
-    })
-  }
-  elem.setUser(user)
 
   let childMessages = {}
   window.addEventListener('message', msg => {
@@ -269,7 +208,7 @@ function onLog (elem, opts) {
       // Doc write from app in stream.
       let uuid = frame.getAttribute('embed-uuid')
       let latestKey = frame.getAttribute('embed-latestKey')
-      let info = {
+      let data = {
         data: msg.data.data,
         origin: msg.origin,
         api: msg.data.api,
@@ -277,9 +216,9 @@ function onLog (elem, opts) {
         parent: latestKey,
         'embed-uuid': uuid
       }
-      post('app-data', info, (err, node) => {
+      opts.writeData({type: 'app-data', data}, (err, info) => {
         if (err) return console.error(err)
-        frame.setAttribute('embed-latestKey', node.key)
+        frame.setAttribute('embed-latestKey', info.id)
       })
     }
   })
@@ -290,53 +229,46 @@ function onLog (elem, opts) {
               src="${app.iframe}" scrolling=no />
     `
     let url = new URL(app.iframe)
-    let doc = {type: 'app', user}
+    let doc = {type: 'app'}
     let el = bongBongApp(doc)
     childMessages[url.origin] = msg => {
       let info = {data: msg.data, origin: msg.origin}
 
-      let cleanup = (node) => {
+      let cleanup = (ts) => {
         // Remove close box
         let closebox = el.querySelector('div.boxclose')
         closebox.parentNode.removeChild(closebox)
         // Set time info
         let time = el.querySelector('span.ts')
-        time.setAttribute('ts', node.value.ts)
+        time.setAttribute('ts', ts)
         let now = Date.now()
 
-        if ((now - node.value.ts) < 10 * 60 * 1000) {
-          time.innerHTML = moment(node.value.ts).fromNow()
+        if ((now - ts) < 10 * 60 * 1000) {
+          time.innerHTML = moment(ts).fromNow()
         } else {
-          time.innerHTML = moment(node.value.ts).calendar()
+          time.innerHTML = moment(ts).calendar()
         }
       }
 
-      let setNodeId = node => {
-        iframe.setAttribute('embed-uuid', node.value.uuid)
-        iframe.setAttribute('embed-latestKey', node.key)
-        iframe.setAttribute('id', `embed-${node.value.uuid}`)
-      }
+      // let setNodeId = node => {
+      //   iframe.setAttribute('embed-uuid', node.value.uuid)
+      //   iframe.setAttribute('embed-latestKey', node.key)
+      //   iframe.setAttribute('id', `embed-${node.value.uuid}`)
+      // }
 
-      let uuid
       // Image insert
       if (msg.data && msg.data.image) {
         info.image = msg.data.image
-        uuid = post('image', info, (err, node) => {
+        post('image', info, (err, node) => {
           if (err) return console.error(err)
-          el.parentNode.removeChild(el)
-          insertMessage(bongBongImage(node.value), node.value)
-          setNodeId(node)
         })
       }
       if (msg.data && msg.data.embed) {
-        uuid = post('app', info, (err, node) => {
+        post('app', info, (err, node) => {
           if (err) return console.error(err)
-          cleanup(node)
-          // Leave iframe active.
-          setNodeId(node)
+          cleanup(Date.now())
         })
       }
-      logsEmitted.push(uuid)
       childMessages[url.origin] = null
     }
 
@@ -354,10 +286,6 @@ function onLog (elem, opts) {
   }
 
   let postTextMessage = (text) => {
-    if (!user.nickname) {
-      alert('Please set your nickname before posting.')
-      return false
-    }
     post('text', {text})
     return true
   }
@@ -390,11 +318,6 @@ function onLog (elem, opts) {
   window.onresize = reflow
 }
 
-function onSwarm (elem, opts) {
-  opts.log = opts.swarm.log
-  onLog(elem, opts)
-}
-
 function init (elem, opts) {
   if (!opts) opts = {}
   if (opts.log) {
@@ -404,29 +327,88 @@ function init (elem, opts) {
     return onSwarm(elem, opts)
   }
 
-  if (!opts.log && !opts.swarm && opts.room) {
-    getRtcConfig((err, rtcConfig) => {
-      if (err) return console.error(err)
+  let room = opts.room
 
-      let signalExchange = opts.signalExchange || defaultSignalExchange
-      let roomExchange = opts.roomExchange || defaultRoomExchange
-      let room = opts.room
+  if (!room) throw new Error('room not set')
 
-      if (!room) throw new Error('room not set')
-      let ns = opts.ns || 'bong-bong'
-      room = `${ns}:${room}`
-      let sopts = {
-        levelup: levelup(`./${room}`, {db: memdown}),
-        config: rtcConfig
-      }
-      let swarm = createSwarm(signalExchange, sopts)
-      swarm.joinRoom(roomExchange, room)
-      opts.swarm = swarm
-      onSwarm(elem, opts)
-    })
-    return
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  let host
+  if (window.location.hostname === 'localhost') {
+    host = 'localhost:8080'
+  } else {
+    host = 'bong-bong.now.sh'
   }
-  throw new Error('Must pass either feed, swarm, or room option.')
+  const ws = websocket(`${scheme}://${host}`)
+
+  if (localStorage.bongBongToken) {
+    let token = JSON.parse(localStorage.bongBongToken)
+    opts.sodi = sodi(token.keypair)
+    opts.token = token
+  }
+
+  if (!opts.sodi) {
+    opts.login = () => {
+      let unblur
+      let loginIframe = sodiAuthority((err, info) => {
+        if (err) throw err
+        opts.keypair = info.keypair
+        opts.sodi = sodi(info.keypair)
+        opts.signature = info.signature
+        delete opts.login
+        if (opts.onLogin) opts.onLogin()
+        let token = {
+          keypair: {
+            publicKey: info.keypair.publicKey.toString('hex'),
+            secretKey: info.keypair.secretKey.toString('hex')
+          },
+          signature: info.signature
+        }
+        localStorage.bongBongToken = JSON.stringify(token)
+        opts.token = token
+        unblur()
+      })
+      unblur = blurModal(loginIframe)
+    }
+  }
+
+  const meth = methodman(ws)
+  meth.on('commands:base', remote => {
+    // TODO: initial query
+    remote.joinRoom(room, (err, info) => {
+      if (err) throw err
+    })
+    opts.writeData = (data, cb) => {
+      data.ts = Date.now()
+      let doc = {
+        message: data,
+        signature: opts.sodi.sign(JSON.stringify(data)).toString('hex'),
+        publicKey: opts.sodi.public,
+        authorities: [opts.token.signature]
+      }
+      if (!cb) cb = () => {} // TODO: remove need for this.
+      remote.writeData(room, doc, cb)
+    }
+    // TODO: opts.writeData
+  })
+  meth.on('stream:database', (stream, id) => {
+    // TODO: decode JSON
+    let parser = jsonstream2.parse([/./])
+    let log = new events.EventEmitter()
+    let verify = doc => {
+      let msg = JSON.stringify(doc.message)
+      return sodi.verify(msg, doc.signature, doc.publicKey)
+    }
+    stream.pipe(parser).on('data', obj => {
+      if (verify(obj) && verify(obj.authorities[0])) {
+        let user = obj.authorities[0].message.user
+        let doc = obj.message
+        log.emit('data', {user, doc})
+      }
+    })
+    opts.log = log
+    onLog(elem, opts)
+    if (opts.login) opts.login()
+  })
 }
 
 const view = funky`

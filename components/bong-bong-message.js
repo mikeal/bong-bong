@@ -16,10 +16,10 @@ const view = funky`
 ${() => {}}
 <bong-bong-message>
   <div class="nickname">
-    <span class="nick">${ doc => doc.user.nickname }</span>
+    <span class="nick">${ doc => doc.user.login }</span>
     ${ bongBongTime }
   </div>
-  <div class="text">${ doc => toTextElement(doc.text) }</div>
+  <div class="text">${ doc => toTextElement(doc.data.text) }</div>
 </bong-bong-message>
 `
 
