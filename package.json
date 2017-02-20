@@ -8,7 +8,7 @@
     "deploy": "now -e BONG_COUCHDB=@bong_couchdb",
     "dev": "budo index.js:bundle.js",
     "devsocket": "budo index.js:bundle.js & node server.js & wait",
-    "build": "browserify index.js | babili -o bundle.js"
+    "build": "browserify index.js > bundle.js"
   },
   "keywords": [],
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (http://www.mikealrogers.com)",
