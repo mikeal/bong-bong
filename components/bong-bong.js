@@ -342,7 +342,7 @@ function init (elem, opts) {
   host = 'bong-bong.now.sh'
   scheme = 'wss'
 
-  if ((new URL(window.location)).searchParams.get('devsocket')) {heme
+  if ((new URL(window.location)).searchParams.get('devsocket')) {
     scheme = 'ws'
     host = 'localhost:8080'
   }
