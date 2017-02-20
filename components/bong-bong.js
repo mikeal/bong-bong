@@ -90,7 +90,7 @@ function onLog (elem, opts) {
       if (before === null) {
         display.appendChild(el)
       } else {
-        display.insertBefore(el, before.parentNode.parentNode)
+        display.insertBefore(el, before.parentNode.parentNode.parentNode)
       }
 
       if (top === 0 || (bottom + el.scrollHeight + 5) > height) {

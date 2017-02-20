@@ -15,54 +15,9 @@ function hide (el) {
 
 function init (elem, opts) {
   if (!opts.storage) throw new Error('Must pass storage.')
-  let save = () => {
-    let val = elem.querySelector('div#bb-settings-nick-input').textContent
-    opts.storage.set('nickname', val)
-  }
-  let showSettings = () => {
-    let emoji = elem.querySelector('div.bb-settings-box img.emojione')
-    hide(elem.querySelector('img'))
-    show(elem.querySelector('div.bb-settings-box'))
-
-    let nickname = elem.querySelector('div#bb-settings-nick-input')
-    if (opts.storage.get('nickname')) {
-      nickname.textContent = opts.storage.get('nickname')
-    } else {
-      nickname.onclick = () => {
-        nickname.textContent = ''
-        nickname.onclick = null
-        nickname.click()
-        nickname.focus()
-      }
-    }
-    nickname.onkeydown = e => {
-      if (e.which === 13) {
-        e.preventDefault()
-        emoji.click()
-      }
-    }
-    elem.style.cursor = 'default'
-    elem.onclick = null
-    emoji.style.cursor = 'pointer'
-    emoji.onclick = hideSettings
-  }
-  let hideSettings = (e) => {
-    save()
-    if (e.stopPropagation) {
-      e.stopPropagation()
-    } else {
-      e.cancelBubble = true
-    }
-    show(elem.querySelector('img'))
-    hide(elem.querySelector('div.bb-settings-box'))
-    let emoji = elem.querySelector('img.emojione')
-    emoji.style.cursor = 'pointer'
-    emoji.onclick = showSettings
-  }
-
   let emoji = elem.querySelector('img.emojione')
   emoji.style.cursor = 'pointer'
-  emoji.onclick = showSettings
+  emoji.onclick = () => alert('Not Implemented.')
 }
 
 const view = funky`
@@ -101,12 +56,6 @@ ${init}
   }
   </style>
   ${bel([gearImage])}
-  <div class="bb-settings-box" style="display:none;">
-    ${bel([floppyImage])}
-    <div id="bb-settings-nick-input" contenteditable="true">
-      <span class="unset-setting">Set Nickname</span>
-    </div>
-  </div>
 </bong-bong-settings>
 `
 
