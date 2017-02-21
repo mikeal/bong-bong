@@ -63,6 +63,10 @@ function onWebsocketStream (stream) {
     })
   }
   rpc.writeData = (room, doc, cb) => {
+    if (JSON.stringify(doc).length > (500 * 1000)) {
+      return cb(new Error('Max Length.'))
+    }
+
     let verify = doc => {
       let msg = JSON.stringify(doc.message)
       return sodi.verify(msg, doc.signature, doc.publicKey)
