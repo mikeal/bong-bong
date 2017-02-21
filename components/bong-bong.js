@@ -5,6 +5,7 @@ const moment = require('moment')
 const jsonstream2 = require('jsonstream2')
 const sodiAuthority = require('sodi-authority')
 const sodi = require('sodi')
+const qs = require('querystring')
 const events = require('events')
 const blurModal = require('blur-modal')
 const EventEmitter = require('events').EventEmitter
@@ -348,10 +349,11 @@ function init (elem, opts) {
 
   if (!room) throw new Error('room not set')
 
-  host = 'bong-bong.now.sh'
-  scheme = 'wss'
+  let host = 'bong-bong.now.sh'
+  let scheme = 'wss'
 
-  if ((new URL(window.location)).searchParams.get('devsocket')) {
+  let searchParams = qs.parse(window.location.search.slice(1))
+  if (searchParams['devsocket']) {
     scheme = 'ws'
     host = 'localhost:8080'
   }

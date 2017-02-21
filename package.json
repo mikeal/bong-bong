@@ -15,7 +15,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "bel": "^4.5.0",
-    "blur-modal": "^0.2.0",
+    "blur-modal": "^0.3.0",
     "couch": "^0.5.0",
     "element-class": "^0.2.2",
     "emoji-regex": "^6.0.0",
@@ -34,7 +34,7 @@
     "moment": "^2.15.2",
     "selection-range": "^1.1.0",
     "sodi": "^0.3.0",
-    "sodi-authority": "^0.2.0",
+    "sodi-authority": "^0.3.0",
     "websocket-stream": "^3.3.3",
     "xhr": "^2.2.2"
   },
