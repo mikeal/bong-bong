@@ -439,14 +439,13 @@ function init (elem, opts) {
     opts.log = log
     onLog(elem, opts)
     if (opts.login) opts.login()
-
-    let reconnect = e => {
-      console.log('Disconnected', e)
-      // TODO: Implement reconnect logic.
-    }
-    stream.on('error', reconnect)
-    stream.on('end', reconnect)
   })
+  let reconnect = e => {
+    console.log('Disconnected', e)
+    // TODO: Implement reconnect logic.
+  }
+  ws.on('error', reconnect)
+  ws.on('end', reconnect)
 }
 
 const view = funky`

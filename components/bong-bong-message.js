@@ -31,6 +31,11 @@ ${init}
     bong-msg-content bong-msg-body iframe {
       width: 100%;
     }
+
+    bong-msg-body bong-text p {
+      margin-top: 5px;
+    }
+
   </style>
   <bong-avatar>
     <img src="${ doc => doc.user.avatar_url }" />
