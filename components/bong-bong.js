@@ -19,7 +19,7 @@ const globalApps = [
 ]
 
 const bongBongInput = require('./bong-bong-input')
-const bongBongMessage = require('./bong-bong-message')
+const bongBongText = require('./bong-bong-text')
 const bongBongSettings = require('./bong-bong-settings')
 const bongBongImage = require('./bong-bong-image')
 const bongBongApp = require('./bong-bong-app')
@@ -122,7 +122,7 @@ function onLog (elem, opts) {
 
   let onTextMessage = (doc) => {
     // TODO: Find existing node and update if exists
-    let el = bongBongMessage(doc)
+    let el = bongBongText(doc)
     insertMessage(el, doc)
     tick()
   }
@@ -131,11 +131,23 @@ function onLog (elem, opts) {
     opts.writeData({type, data}, cb)
   }
 
+  let _suppress = []
+  let suppress = id => {
+    let el = document.getElementById(id)
+    if (el) {
+      el.parentNode.removeChild(el)
+    }
+    _suppress.push(id)
+  }
+
   log.on('data', obj => {
     let doc = obj.doc
     let user = obj.user
     if (!doc || !doc.type || !user) return
     doc.user = user
+
+    doc.id = obj.id
+    if (_suppress.indexOf(doc.id) !== -1) return
 
     switch (doc.type) {
       case 'text': {
@@ -170,7 +182,7 @@ function onLog (elem, opts) {
             iframe.write(pending.shift())
           }
         }
-        el.appendChild(iframe)
+        el.querySelector('bong-msg-body').appendChild(iframe)
         break
       }
       case 'app-data': {
@@ -198,7 +210,6 @@ function onLog (elem, opts) {
         msg.data.slice(0, 'setImmediate'.length) === 'setImmediate') {
       return // setImmediate polyfill.
     }
-    console.log(msg)
     let frame = findFrame(msg)
     // Height Set
     if (msg.data && msg.data.height) {
@@ -240,11 +251,10 @@ function onLog (elem, opts) {
               src="${app.iframe}" scrolling=no />
     `
     let url = new URL(app.iframe)
-    let doc = {type: 'app'}
+    let me = opts.token.signature.message.user
+    let doc = {type: 'app', user: me}
     let el = bongBongApp(doc)
     childMessages[url.origin] = msg => {
-      let info = {data: msg.data, origin: msg.origin}
-
       let cleanup = (ts) => {
         // Remove close box
         let closebox = el.querySelector('div.boxclose')
@@ -267,16 +277,15 @@ function onLog (elem, opts) {
       //   iframe.setAttribute('id', `embed-${node.value.uuid}`)
       // }
 
-      // Image insert
       if (msg.data && msg.data.image) {
-        info.image = msg.data.image
-        post('image', info, (err, node) => {
+        post('image', msg.data, (err, info) => {
           if (err) return console.error(err)
         })
       }
       if (msg.data && msg.data.embed) {
-        post('app', info, (err, node) => {
+        post('app', msg.data, (err, info) => {
           if (err) return console.error(err)
+          suppress(id)
           cleanup(Date.now())
         })
       }
@@ -289,9 +298,9 @@ function onLog (elem, opts) {
     let width = el.offsetWidth - 32
     iframe.setAttribute('height', Math.floor(height))
     iframe.setAttribute('width', Math.floor(width))
-    el.appendChild(iframe)
+    el.querySelector('bong-msg-body').appendChild(iframe)
     el.querySelector('div.boxclose').onclick = e => {
-      let box = e.target.parentNode.parentNode
+      let box = e.target.parentNode.parentNode.parentNode.parentNode
       box.parentNode.removeChild(box)
     }
   }
@@ -381,10 +390,8 @@ function init (elem, opts) {
   }
 
   const meth = methodman(ws)
-  console.log('starting')
   meth.on('commands:base', remote => {
     // TODO: initial query
-    console.log('remote')
     remote.joinRoom(room, (err, info) => {
       if (err) throw err
     })
@@ -406,7 +413,6 @@ function init (elem, opts) {
     })
   })
   meth.on('stream:database', (stream, id) => {
-    console.log('database stream')
     // TODO: decode JSON
     let parser = jsonstream2.parse([/./])
     let log = new events.EventEmitter()
@@ -425,7 +431,7 @@ function init (elem, opts) {
         ) {
         let user = obj.authorities[0].message.user
         let doc = obj.message
-        log.emit('data', {user, doc})
+        log.emit('data', {user, doc, id: obj._id})
       }
     })
     opts.log = log
@@ -526,7 +532,7 @@ ${init}
     line-height: 14px;
     font-size: 8pt;
     font-family: tahoma;
-    margin-top: -20px;
+    margin-top: -40px;
     margin-right: -20px;
     float: right;
 

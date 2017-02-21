@@ -1,19 +1,13 @@
 const funky = require('funky')
-const emojione = require('emojione')
-const bel = require('bel')
+
 const bongBongTime = require('./bong-bong-time')
 
-var linkify = require('linkifyjs/html')
-
-function toTextElement (str) {
-  // str = escapeHtml(str)
-  let ret = bel`<span></span>`
-  ret.innerHTML = linkify(emojione.toImage(str), {defaultProtocol: 'https'})
-  return ret
+const init = (elem, opts) => {
+  if (opts.id) elem.id = opts.id
 }
 
 const view = funky`
-${() => {}}
+${init}
 <bong-bong-message>
   <style>
     bong-bong-message {
@@ -28,17 +22,28 @@ ${() => {}}
     bong-avatar {
       margin-right: 15px;
     }
+    bong-msg-content {
+      flex: flex-grow;
+      width: 100%;
+    }
+    bong-msg-content div.nickname,
+    bong-msg-content bong-msg-body,
+    bong-msg-content bong-msg-body iframe {
+      width: 100%;
+    }
   </style>
   <bong-avatar>
     <img src="${ doc => doc.user.avatar_url }" />
   </bong-avatar>
-  <bong-msg-body>
+  <bong-msg-content>
     <div class="nickname">
       <span class="nick">${ doc => doc.user.login }</span>
       ${ bongBongTime }
     </div>
-    <div class="text">${ doc => toTextElement(doc.data.text) }</div>
-  </bong-msg-body>
+    <bong-msg-body>
+      ${ doc => doc.msgBody }
+    </bong-msg-body>
+  </bong-msg-content>
 </bong-bong-message>
 `
 

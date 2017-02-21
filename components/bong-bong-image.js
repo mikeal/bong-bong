@@ -1,5 +1,5 @@
 const funky = require('funky')
-const bongBongTime = require('./bong-bong-time')
+const bongBongMessage = require('./bong-bong-message')
 
 function init (elem, opts) {
   elem.querySelector('img').onload = () => {
@@ -9,13 +9,12 @@ function init (elem, opts) {
 
 const view = funky`
 ${init}
-<bong-bong-message>
-  <div class="nickname">
-    <span class="nick">${ doc => doc.user.nickname }</span>
-    ${ bongBongTime }
-  </div>
-  <img src="${opts => opts.image}" />
-</bong-bong-message>
+<bong-bong-image>
+  <img src="${opts => opts.data.image}" />
+</bong-bong-image>
 `
 
-module.exports = view
+module.exports = opts => {
+  opts.msgBody = view(opts)
+  return bongBongMessage(opts)
+}
