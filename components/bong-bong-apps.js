@@ -25,14 +25,14 @@ const blurModal = elem => {
   </blur-modal>
   `
   let blur = px => {
-    [...elem.children].forEach(el => {
+    Array.prototype.slice.call(elem.children).forEach(el => {
       el.style.filter = `blur(${px || 5}px)`
     })
   }
   let remove = () => {
     modalElement.querySelector('div.blur-modal-container').innerHTML = ''
     elem.removeChild(modalElement)
-    ;[...elem.children].forEach(el => {
+    Array.prototype.slice.call(elem.children).forEach(el => {
       el.style.filter = ''
     })
   }

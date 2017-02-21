@@ -68,7 +68,7 @@ function init (elem, opts) {
   }
 
   let post = () => {
-    let children = [...textarea.children]
+    let children = Array.prototype.slice.call(textarea.children)
     for (let i = 0; i < children.length; i++) {
       let el = children[i]
       if (el.className === 'emojione') {
