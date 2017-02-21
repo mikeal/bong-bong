@@ -14,8 +14,8 @@ const methodman = require('methodman')
 
 const globalApps = [
   require('./apps/dropub.json'),
-  require('./apps/stickers.json'),
-  require('./apps/pixel-pad.json')
+  require('./apps/stickers.json')
+  // require('./apps/pixel-pad.json')
 ]
 
 const bongBongInput = require('./bong-bong-input')
