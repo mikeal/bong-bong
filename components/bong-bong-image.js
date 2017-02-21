@@ -3,7 +3,7 @@ const bongBongMessage = require('./bong-bong-message')
 
 function init (elem, opts) {
   elem.querySelector('img').onload = () => {
-    elem.parentNode.parentNode._reflow()
+    elem.parentNode.parentNode.parentNode.parentNode.parentNode._reflow()
   }
 }
 
