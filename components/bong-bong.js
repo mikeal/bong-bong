@@ -135,6 +135,7 @@ function onLog (elem, opts) {
           recent.parentNode.parentNode._reflow()
         } else {
           let el = bongBongImage(doc)
+          el.user = doc.user
           opts.insertMessage(el, doc)
         }
 
