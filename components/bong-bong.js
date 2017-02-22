@@ -118,6 +118,7 @@ function onLog (elem, opts) {
           let el = bongBongText.getBody(doc)
           recent.querySelector('bong-msg-body').appendChild(el)
           el.id = doc.id
+          recent.parentNode.parentNode._reflow()
         } else {
           let el = bongBongText(doc)
           el.user = doc.user
@@ -131,6 +132,7 @@ function onLog (elem, opts) {
           let el = bongBongImage.getBody(doc)
           recent.querySelector('bong-msg-body').appendChild(el)
           el.id = doc.id
+          recent.parentNode.parentNode._reflow()
         } else {
           let el = bongBongImage(doc)
           opts.insertMessage(el, doc)
