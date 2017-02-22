@@ -14,7 +14,7 @@ function hide (el) {
 }
 
 function init (elem, opts) {
-  if (!opts.storage) throw new Error('Must pass storage.')
+  // if (!opts.storage) throw new Error('Must pass storage.')
   let emoji = elem.querySelector('img.emojione')
   emoji.style.cursor = 'pointer'
   emoji.onclick = () => alert('Not Implemented.')

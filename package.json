@@ -33,6 +33,7 @@
     "marked": "^0.3.6",
     "memdown": "^1.2.2",
     "moment": "^2.15.2",
+    "once": "^1.4.0",
     "sanitize-html": "^1.14.1",
     "selection-range": "^1.1.0",
     "sodi": "^0.3.0",

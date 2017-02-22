@@ -1,10 +1,11 @@
-/* globals alert, localStorage, URL */
+/* globals localStorage, URL */
 const funky = require('funky')
 const bel = require('bel')
 const moment = require('moment')
 const jsonstream2 = require('jsonstream2')
 const sodiAuthority = require('sodi-authority')
 const sodi = require('sodi')
+const once = require('once')
 const qs = require('querystring')
 const events = require('events')
 const blurModal = require('blur-modal')
@@ -61,7 +62,17 @@ function validAuthority (signature) {
   return false
 }
 
+let _suppress = []
+let suppress = id => {
+  let el = document.getElementById(id)
+  if (el) {
+    el.parentNode.removeChild(el)
+  }
+  _suppress.push(id)
+}
+
 function onLog (elem, opts) {
+  console.log('Connected')
   let log = opts.log
   if (!log) throw new Error('Must set the log before setting the feed.')
 
@@ -72,73 +83,11 @@ function onLog (elem, opts) {
     opts.set('nickname', opts.nickname)
   }
 
-  let displayContainer = elem.querySelector('div.bb-display')
-
-  function insertMessage (el, doc) {
-    /*
-      This not the simplest way to insert elements in the right order
-      but it should be the fastest for our use case because it optimizes
-      for new nodes being inserted at the end.
-    */
-    let before = null
-    let spans = [...document.querySelectorAll('span.ts')].reverse()
-    let _insert = () => {
-      let display = displayContainer
-      let top = display.scrollTop
-      let bottom = top + display.clientHeight
-      let height = display.scrollHeight
-
-      if (before === null) {
-        display.appendChild(el)
-      } else {
-        display.insertBefore(el, before.parentNode.parentNode.parentNode)
-      }
-
-      if (top === 0 || (bottom + el.scrollHeight + 5) > height) {
-        // If we are at the very top or very bottom of the scroll
-        // focus on the last element.
-        display.children[display.children.length - 1].scrollIntoView(instant)
-      } else {
-        // TODO: check if we were inserted before or after the prior
-        //       scroll point and adjust accordingly
-      }
-    }
-    for (var i = 0; i < spans.length; i++) {
-      let span = spans[i]
-      let _string = span.getAttribute('ts')
-      let ts
-      if (_string === 'none') {
-        ts = Infinity
-      } else {
-        ts = +_string
-      }
-      if (ts < (doc.ts ? doc.ts : Infinity)) {
-        return _insert()
-      } else {
-        before = span
-      }
-    }
-    _insert() // insert before the first element
-  }
-
   let onTextMessage = (doc) => {
     // TODO: Find existing node and update if exists
     let el = bongBongText(doc)
-    insertMessage(el, doc)
+    opts.insertMessage(el, doc)
     tick()
-  }
-
-  let post = (type, data, cb) => {
-    opts.writeData({type, data}, cb)
-  }
-
-  let _suppress = []
-  let suppress = id => {
-    let el = document.getElementById(id)
-    if (el) {
-      el.parentNode.removeChild(el)
-    }
-    _suppress.push(id)
   }
 
   log.on('data', obj => {
@@ -149,6 +98,10 @@ function onLog (elem, opts) {
 
     doc.id = obj.id
     if (_suppress.indexOf(doc.id) !== -1) return
+
+    if (document.getElementById(doc.id)) {
+      return // Suppress re-display.
+    }
 
     switch (doc.type) {
       case 'text': {
@@ -162,7 +115,7 @@ function onLog (elem, opts) {
         `
         // let url = new URL(doc.data.embed)
         let el = bongBongApp(doc)
-        insertMessage(el, doc)
+        opts.insertMessage(el, doc)
         tick()
         let height = 100
         let width = el.offsetWidth - 32
@@ -198,12 +151,128 @@ function onLog (elem, opts) {
       }
       case 'image': {
         let el = bongBongImage(doc)
-        insertMessage(el, doc)
+        opts.insertMessage(el, doc)
         break
       }
     }
   })
+}
 
+function init (elem, opts) {
+  if (!opts) opts = {}
+  if (opts.log) {
+    return onLog(elem, opts)
+  }
+
+  let room = opts.room
+
+  if (!room) throw new Error('room not set')
+
+  let host = 'bong-bong.now.sh'
+  let scheme = 'wss'
+
+  let searchParams = qs.parse(window.location.search.slice(1))
+  if (searchParams['devsocket']) {
+    scheme = 'ws'
+    host = 'localhost:8080'
+  }
+
+  if (localStorage.bongBongToken) {
+    let token = JSON.parse(localStorage.bongBongToken)
+    opts.sodi = sodi(token.keypair)
+    opts.token = token
+  }
+
+  if (!opts.sodi) {
+    opts.login = () => {
+      let unblur
+      let loginIframe = sodiAuthority((err, info) => {
+        if (err) throw err
+        opts.keypair = info.keypair
+        opts.sodi = sodi(info.keypair)
+        opts.signature = info.signature
+        delete opts.login
+        if (opts.onLogin) opts.onLogin()
+        let token = {
+          keypair: {
+            publicKey: info.keypair.publicKey.toString('hex'),
+            secretKey: info.keypair.secretKey.toString('hex')
+          },
+          signature: info.signature
+        }
+        localStorage.bongBongToken = JSON.stringify(token)
+        opts.token = token
+        unblur()
+      })
+      unblur = blurModal(loginIframe)
+    }
+  }
+
+  let connect = () => websocket(`${scheme}://${host}`)
+
+  let onWebSocket = ws => {
+    console.log('Connecting')
+    const meth = methodman(ws)
+    meth.on('commands:base', remote => {
+      // TODO: initial query
+      remote.joinRoom(room, (err, info) => {
+        if (err) throw err
+      })
+      opts.writeData = (data, cb) => {
+        data.ts = Date.now()
+        let doc = {
+          message: data,
+          signature: opts.sodi.sign(JSON.stringify(data)).toString('hex'),
+          publicKey: opts.sodi.public,
+          authorities: [opts.token.signature]
+        }
+        if (!cb) cb = () => {} // TODO: remove need for this.
+        remote.writeData(room, doc, cb)
+      }
+      // TODO: opts.writeData
+
+      remote.recent(room, (err, info) => {
+        // TODO: add button for further paging.
+      })
+    })
+    meth.on('stream:database', (stream, id) => {
+      // TODO: decode JSON
+      let parser = jsonstream2.parse([/./])
+      let log = new events.EventEmitter()
+      let verify = doc => {
+        let msg = JSON.stringify(doc.message)
+        return sodi.verify(msg, doc.signature, doc.publicKey)
+      }
+      stream.pipe(parser).on('data', obj => {
+        // Check if this was signed by a valid authority
+        if (!validAuthority(obj.authorities[0])) return
+        // Verify both the authority signature and message
+        // signature are valid.
+        if (verify(obj) &&
+            verify(obj.authorities[0]) &&
+            obj.authorities[0].message.publicKey === obj.publicKey
+          ) {
+          let user = obj.authorities[0].message.user
+          let doc = obj.message
+          log.emit('data', {user, doc, id: obj._id})
+        }
+      })
+      opts.log = log
+      onLog(elem, opts)
+      if (opts.login) opts.login()
+    })
+
+    let reconnect = once(e => {
+      console.log('Disconnected')
+      // TODO: Implement reconnect logic.
+      onWebSocket(connect())
+    })
+    ws.on('error', reconnect)
+    ws.on('end', reconnect)
+  }
+  onWebSocket(connect())
+
+  // UI Setup
   let childMessages = {}
   window.addEventListener('message', msg => {
     if (msg.data &&
@@ -279,21 +348,21 @@ function onLog (elem, opts) {
       // }
 
       if (msg.data && msg.data.image) {
-        post('image', msg.data, (err, info) => {
+        opts.writeData({type: 'image', data: msg.data}, (err, info) => {
           if (err) return console.error(err)
         })
       }
       if (msg.data && msg.data.embed) {
-        post('app', msg.data, (err, info) => {
+        opts.writeData({type: 'app', data: msg.data}, (err, info) => {
           if (err) return console.error(err)
-          suppress(id)
+          suppress(info.id)
           cleanup(Date.now())
         })
       }
       childMessages[url.origin] = null
     }
 
-    insertMessage(el, doc)
+    opts.insertMessage(el, doc)
     tick()
     let height = app.height || 100
     let width = el.offsetWidth - 32
@@ -307,18 +376,13 @@ function onLog (elem, opts) {
   }
 
   let postTextMessage = (text) => {
-    post('text', {text})
+    opts.writeData({type: 'text', data: {text}})
     return true
   }
 
-  let inputView = bongBongInput({log, postTextMessage, apps: globalApps})
+  let inputView = bongBongInput({postTextMessage, apps: globalApps})
   let footer = elem.querySelector('div.bb-footer')
   footer.appendChild(inputView)
-
-  opts.storage.on('nickname', nickname => {
-    user.nickname = nickname
-    elem.setUser(user)
-  })
 
   let settings = bongBongSettings(opts)
   elem.querySelector('div.bb-header').appendChild(settings)
@@ -337,115 +401,55 @@ function onLog (elem, opts) {
   reflow()
   elem._reflow = reflow
   window.onresize = reflow
-}
 
-function init (elem, opts) {
-  if (!opts) opts = {}
-  if (opts.log) {
-    return onLog(elem, opts)
-  }
+  let displayContainer = elem.querySelector('div.bb-display')
 
-  let room = opts.room
+  opts.insertMessage = (el, doc) => {
+    /*
+      This not the simplest way to insert elements in the right order
+      but it should be the fastest for our use case because it optimizes
+      for new nodes being inserted at the end.
+    */
+    let before = null
+    let spans = [...document.querySelectorAll('span.ts')].reverse()
+    let _insert = () => {
+      let display = displayContainer
+      let top = display.scrollTop
+      let bottom = top + display.clientHeight
+      let height = display.scrollHeight
 
-  if (!room) throw new Error('room not set')
-
-  let host = 'bong-bong.now.sh'
-  let scheme = 'wss'
-
-  let searchParams = qs.parse(window.location.search.slice(1))
-  if (searchParams['devsocket']) {
-    scheme = 'ws'
-    host = 'localhost:8080'
-  }
-
-  const ws = websocket(`${scheme}://${host}`)
-
-  if (localStorage.bongBongToken) {
-    let token = JSON.parse(localStorage.bongBongToken)
-    opts.sodi = sodi(token.keypair)
-    opts.token = token
-  }
-
-  if (!opts.sodi) {
-    opts.login = () => {
-      let unblur
-      let loginIframe = sodiAuthority((err, info) => {
-        if (err) throw err
-        opts.keypair = info.keypair
-        opts.sodi = sodi(info.keypair)
-        opts.signature = info.signature
-        delete opts.login
-        if (opts.onLogin) opts.onLogin()
-        let token = {
-          keypair: {
-            publicKey: info.keypair.publicKey.toString('hex'),
-            secretKey: info.keypair.secretKey.toString('hex')
-          },
-          signature: info.signature
-        }
-        localStorage.bongBongToken = JSON.stringify(token)
-        opts.token = token
-        unblur()
-      })
-      unblur = blurModal(loginIframe)
-    }
-  }
-
-  const meth = methodman(ws)
-  meth.on('commands:base', remote => {
-    // TODO: initial query
-    remote.joinRoom(room, (err, info) => {
-      if (err) throw err
-    })
-    opts.writeData = (data, cb) => {
-      data.ts = Date.now()
-      let doc = {
-        message: data,
-        signature: opts.sodi.sign(JSON.stringify(data)).toString('hex'),
-        publicKey: opts.sodi.public,
-        authorities: [opts.token.signature]
+      if (before === null) {
+        display.appendChild(el)
+      } else {
+        display.insertBefore(el, before.parentNode.parentNode.parentNode)
       }
-      if (!cb) cb = () => {} // TODO: remove need for this.
-      remote.writeData(room, doc, cb)
-    }
-    // TODO: opts.writeData
 
-    remote.recent(room, (err, info) => {
-      // TODO: add button for further paging.
-    })
-  })
-  meth.on('stream:database', (stream, id) => {
-    // TODO: decode JSON
-    let parser = jsonstream2.parse([/./])
-    let log = new events.EventEmitter()
-    let verify = doc => {
-      let msg = JSON.stringify(doc.message)
-      return sodi.verify(msg, doc.signature, doc.publicKey)
-    }
-    stream.pipe(parser).on('data', obj => {
-      // Check if this was signed by a valid authority
-      if (!validAuthority(obj.authorities[0])) return
-      // Verify both the authority signature and message
-      // signature are valid.
-      if (verify(obj) &&
-          verify(obj.authorities[0]) &&
-          obj.authorities[0].message.publicKey === obj.publicKey
-        ) {
-        let user = obj.authorities[0].message.user
-        let doc = obj.message
-        log.emit('data', {user, doc, id: obj._id})
+      if (top === 0 || (bottom + el.scrollHeight + 5) > height) {
+        // If we are at the very top or very bottom of the scroll
+        // focus on the last element.
+        display.children[display.children.length - 1].scrollIntoView(instant)
+      } else {
+        // TODO: check if we were inserted before or after the prior
+        //       scroll point and adjust accordingly
       }
-    })
-    opts.log = log
-    onLog(elem, opts)
-    if (opts.login) opts.login()
-  })
-  let reconnect = e => {
-    console.log('Disconnected', e)
-    // TODO: Implement reconnect logic.
+    }
+    for (var i = 0; i < spans.length; i++) {
+      let span = spans[i]
+      let _string = span.getAttribute('ts')
+      let ts
+      if (_string === 'none') {
+        ts = Infinity
+      } else {
+        ts = +_string
+      }
+      if (ts < (doc.ts ? doc.ts : Infinity)) {
+        return _insert()
+      } else {
+        before = span
+      }
+    }
+    _insert() // insert before the first element
   }
-  ws.on('error', reconnect)
-  ws.on('end', reconnect)
 }
 
 const view = funky`
