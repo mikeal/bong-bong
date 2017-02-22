@@ -112,6 +112,10 @@ function onLog (elem, opts) {
       recent = null
     }
 
+    let [room, ts] = doc.id.split('@')
+    doc.room = room
+    doc.ts = new Date(ts).getTime()
+
     switch (doc.type) {
       case 'text': {
         if (recent) {
