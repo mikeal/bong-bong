@@ -12,6 +12,7 @@ function toTextElement (str) {
 }
 
 module.exports = opts => {
-  opts.msgBody = toTextElement(opts.data.text)
+  opts.msgBody = module.exports.getBody(opts)
   return bongMessage(opts)
 }
+module.exports.getBody = opts => toTextElement(opts.data.text)

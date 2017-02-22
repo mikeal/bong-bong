@@ -15,6 +15,7 @@ ${init}
 `
 
 module.exports = opts => {
-  opts.msgBody = view(opts)
+  opts.msgBody = module.exports.getBody(opts)
   return bongBongMessage(opts)
 }
+module.exports.getBody = opts => view(opts)

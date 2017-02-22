@@ -61,13 +61,18 @@ function validAuthority (signature) {
   return false
 }
 
-let _suppress = []
-let suppress = id => {
+const _suppress = []
+const suppress = id => {
   let el = document.getElementById(id)
   if (el) {
     el.parentNode.removeChild(el)
   }
   _suppress.push(id)
+}
+
+const latestMessage = () => {
+  let elements = document.querySelectorAll('bong-bong-message')
+  return elements.item(elements.length - 1)
 }
 
 function onLog (elem, opts) {
@@ -80,13 +85,6 @@ function onLog (elem, opts) {
   }
   if (opts.nickname) {
     opts.set('nickname', opts.nickname)
-  }
-
-  let onTextMessage = (doc) => {
-    // TODO: Find existing node and update if exists
-    let el = bongBongText(doc)
-    opts.insertMessage(el, doc)
-    tick()
   }
 
   log.on('data', obj => {
@@ -102,9 +100,42 @@ function onLog (elem, opts) {
       return // Suppress re-display.
     }
 
+    let recent = latestMessage()
+    if (recent && recent.id > doc.id) {
+      recent = null
+    }
+    if (recent && !recent.user) {
+      recent = null
+    }
+    if (recent && recent.user &&
+        recent.user.id !== doc.user.id) {
+      recent = null
+    }
+
     switch (doc.type) {
       case 'text': {
-        onTextMessage(doc)
+        if (recent) {
+          let el = bongBongText.getBody(doc)
+          recent.querySelector('bong-msg-body').appendChild(el)
+          el.id = doc.id
+        } else {
+          let el = bongBongText(doc)
+          el.user = doc.user
+          opts.insertMessage(el, doc)
+          tick()
+        }
+        break
+      }
+      case 'image': {
+        if (recent) {
+          let el = bongBongImage.getBody(doc)
+          recent.querySelector('bong-msg-body').appendChild(el)
+          el.id = doc.id
+        } else {
+          let el = bongBongImage(doc)
+          opts.insertMessage(el, doc)
+        }
+
         break
       }
       case 'app': {
@@ -146,11 +177,6 @@ function onLog (elem, opts) {
           }
         }
         iframe.write(doc.data)
-        break
-      }
-      case 'image': {
-        let el = bongBongImage(doc)
-        opts.insertMessage(el, doc)
         break
       }
     }
