@@ -234,6 +234,17 @@ function init (elem, opts) {
       remote.recent(room, (err, info) => {
         // TODO: add button for further paging.
       })
+
+      let pingpong = ()  => {
+        setTimeout(() => {
+          let start = Date.now()
+          remote.ping(() => {
+            console.log(`ping-pong: ${Date.now() - start}ms RTT`)
+            pingpong()
+          })
+        }, 30 * 1000)
+      }
+      pingpong()
     })
     meth.on('stream:database', (stream, id) => {
       // TODO: decode JSON

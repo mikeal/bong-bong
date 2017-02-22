@@ -87,6 +87,7 @@ function onWebsocketStream (stream) {
       return cb(new Error('Invalid signature.'))
     }
   }
+  rpc.ping = cb => cb()
 
   var meth = methodman(stream)
   meth.commands(rpc, 'base')
