@@ -401,6 +401,7 @@ function init (elem, opts) {
       if (msg.data && msg.data.image) {
         opts.writeData({type: 'image', data: msg.data}, (err, info) => {
           if (err) return console.error(err)
+          el.parentNode.removeChild(el)
         })
       }
       if (msg.data && msg.data.embed) {
