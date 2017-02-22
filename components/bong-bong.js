@@ -7,6 +7,7 @@ const sodiAuthority = require('sodi-authority')
 const sodi = require('sodi')
 const once = require('once')
 const events = require('events')
+const notify = require('./notify')
 const blurModal = require('blur-modal')
 const EventEmitter = require('events').EventEmitter
 
@@ -116,6 +117,13 @@ function onLog (elem, opts) {
     doc.room = room
     doc.ts = new Date(ts).getTime()
 
+    let _notify = () => {
+      let login = opts.token.signature.message.user.login
+      if (doc.data.text.indexOf(`@${login}`) !== -1) {
+        notify(doc)
+      }
+    }
+
     switch (doc.type) {
       case 'text': {
         if (recent) {
@@ -129,6 +137,7 @@ function onLog (elem, opts) {
           opts.insertMessage(el, doc)
           tick()
         }
+        _notify()
         break
       }
       case 'image': {
