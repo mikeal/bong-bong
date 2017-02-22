@@ -6,7 +6,6 @@ const jsonstream2 = require('jsonstream2')
 const sodiAuthority = require('sodi-authority')
 const sodi = require('sodi')
 const once = require('once')
-const qs = require('querystring')
 const events = require('events')
 const blurModal = require('blur-modal')
 const EventEmitter = require('events').EventEmitter
@@ -171,8 +170,7 @@ function init (elem, opts) {
   let host = 'bong-bong.now.sh'
   let scheme = 'wss'
 
-  let searchParams = qs.parse(window.location.search.slice(1))
-  if (searchParams['devsocket']) {
+  if (opts.devsocket) {
     scheme = 'ws'
     host = 'localhost:8080'
   }

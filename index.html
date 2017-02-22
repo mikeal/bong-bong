@@ -29,7 +29,9 @@
       </div>
     </div>
     <script>
-      let chat = bongBong({room:'test'})
+      let opts = window.searchParams
+      if (!opts.room) opts.room = 'test'
+      let chat = bongBong(opts)
       document.getElementById('center-container').appendChild(chat)
     </script>
   </body>
