@@ -322,6 +322,8 @@ function init (elem, opts) {
 
     let reconnect = once(e => {
       console.log('Disconnected')
+      let more = document.querySelector('bong-bong-more')
+      more.parentNode.removeChild(more)
       // TODO: Implement reconnect logic.
       onWebSocket(connect())
     })
