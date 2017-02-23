@@ -58,8 +58,8 @@ function onWebsocketStream (stream) {
     }
     storage.db.all(query, (e, results) => {
       if (e) return cb(e)
-      cb(null, results.rows.map(r => r.id))
       results.rows.map(row => row.doc).reverse().forEach(doc => dbWrite(doc))
+      cb(null, results.rows.map(r => r.id))
     })
   }
   rpc.writeData = (room, doc, cb) => {
