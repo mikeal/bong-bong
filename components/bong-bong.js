@@ -24,6 +24,7 @@ const bongBongInput = require('./bong-bong-input')
 const bongBongText = require('./bong-bong-text')
 const bongBongSettings = require('./bong-bong-settings')
 const bongBongImage = require('./bong-bong-image')
+const bongBongMore = require('./bong-bong-more')
 const bongBongApp = require('./bong-bong-app')
 
 const tick = require('./timers')
@@ -273,12 +274,18 @@ function init (elem, opts) {
 
       remote.recent(room, (err, info) => {
         // TODO: add button for further paging.
+        if (info.length !== 20) return
+        let display = elem.querySelector('div.bb-display')
+        let more = bongBongMore(opts, info[19])
+        display.insertBefore(more, display.childNodes[0])
       })
+      opts.loadRecent = remote.recent
 
       let pingpong = ()  => {
         setTimeout(() => {
           let start = Date.now()
           remote.ping(() => {
+            if (!opts.showping) return
             console.log(`ping-pong: ${Date.now() - start}ms RTT`)
             pingpong()
           })
