@@ -37,7 +37,7 @@
     "sanitize-html": "^1.14.1",
     "selection-range": "^1.1.0",
     "sodi": "^0.3.0",
-    "sodi-authority": "^0.3.0",
+    "sodi-authority": "^1.1.0",
     "websocket-stream": "^3.3.3",
     "xhr": "^2.2.2"
   },

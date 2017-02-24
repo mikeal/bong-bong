@@ -127,6 +127,10 @@ function init (elem, opts) {
       }
     }
   }
+  textarea.onclick = () => {
+    if (opts.login) opts.login()
+    else textarea.onclick = null
+  }
   let reflow = () => {
     if (elem.parentNode &&
         elem.parentNode.parentNode &&

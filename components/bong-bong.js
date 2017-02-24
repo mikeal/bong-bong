@@ -26,6 +26,7 @@ const bongBongSettings = require('./bong-bong-settings')
 const bongBongImage = require('./bong-bong-image')
 const bongBongMore = require('./bong-bong-more')
 const bongBongApp = require('./bong-bong-app')
+const bongLogin = require('./login')
 
 const tick = require('./timers')
 
@@ -119,6 +120,7 @@ function onLog (elem, opts) {
     doc.ts = new Date(ts).getTime()
 
     let _notify = () => {
+      if (!opts.token) return
       let login = opts.token.signature.message.user.login
       if (doc.data.text.indexOf(`@${login}`) !== -1) {
         notify(doc)
@@ -227,7 +229,7 @@ function init (elem, opts) {
   if (!opts.sodi) {
     opts.login = () => {
       let unblur
-      let loginIframe = sodiAuthority((err, info) => {
+      let url = sodiAuthority((err, info) => {
         if (err) throw err
         opts.keypair = info.keypair
         opts.sodi = sodi(info.keypair)
@@ -244,8 +246,9 @@ function init (elem, opts) {
         localStorage.bongBongToken = JSON.stringify(token)
         opts.token = token
         unblur()
+        opts.login = null
       })
-      unblur = blurModal(loginIframe)
+      unblur = blurModal(bongLogin(url))
     }
   }
 
@@ -317,7 +320,6 @@ function init (elem, opts) {
       })
       opts.log = log
       onLog(elem, opts)
-      if (opts.login) opts.login()
     })
 
     let reconnect = once(e => {
@@ -441,7 +443,10 @@ function init (elem, opts) {
     return true
   }
 
-  let inputView = bongBongInput({postTextMessage, apps: globalApps})
+  opts.postTextMessage = postTextMessage
+  if (!opts.apps) opts.apps = globalApps
+
+  let inputView = bongBongInput(opts)
   let footer = elem.querySelector('div.bb-footer')
   footer.appendChild(inputView)
 
