@@ -1,5 +1,7 @@
 # Bong Bong
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/mikeal/bong-bong.svg)](https://greenkeeper.io/)
+
 Open public chat service built for the web.
 
 ## Development
