@@ -14,18 +14,18 @@
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (http://www.mikealrogers.com)",
   "license": "Apache-2.0",
   "dependencies": {
-    "bel": "^4.5.0",
+    "bel": "^5.0.2",
     "blur-modal": "^0.3.0",
     "couch": "^0.5.0",
     "element-class": "^0.2.2",
     "emoji-regex": "^6.0.0",
-    "emojione": "^2.2.6",
+    "emojione": "^3.1.0",
     "follow": "^0.12.1",
     "functional-red-black-tree": "^1.0.1",
     "funky": "^2.2.0",
     "is-buffer": "^1.1.4",
     "jsonstream2": "^1.1.1",
-    "killa-beez": "^2.6.0",
+    "killa-beez": "^3.2.0",
     "level-js": "^2.2.4",
     "levelup": "^1.3.3",
     "linkifyjs": "^2.1.3",
@@ -38,14 +38,14 @@
     "selection-range": "^1.1.0",
     "sodi": "^0.3.0",
     "sodi-authority": "^1.1.0",
-    "websocket-stream": "^3.3.3",
+    "websocket-stream": "^5.0.0",
     "xhr": "^2.2.2"
   },
   "devDependencies": {
-    "babili": "0.0.11",
-    "browserify": "^13.1.0",
-    "budo": "^9.2.1",
-    "now": "^4.5.6",
-    "standard": "^8.4.0"
+    "babili": "0.1.4",
+    "browserify": "^14.4.0",
+    "budo": "^10.0.3",
+    "now": "^7.2.4",
+    "standard": "^10.0.2"
   }
 }
